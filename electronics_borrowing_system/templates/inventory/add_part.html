@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+{% load i18n %}
+{% load static %}
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "إضافة قطعة جديدة" %}</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #f39c12;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .navbar {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .required {
+            color: var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand text-white" href="/inventory/">
+                <i class="fas fa-plus-circle me-2"></i>
+                {% trans "إضافة قطعة جديدة" %}
+            </a>
+
+            <div class="navbar-nav me-auto">
+                <a class="nav-link text-white" href="/inventory/">
+                    <i class="fas fa-arrow-right me-1"></i>{% trans "العودة للوحة المخزون" %}
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Messages -->
+        {% if messages %}
+        <div class="row">
+            <div class="col-12">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Add Part Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3 class="mb-0">
+                            <i class="fas fa-plus-circle text-primary me-2"></i>
+                            {% trans "إضافة قطعة إلكترونية جديدة" %}
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Basic Information Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    {% trans "المعلومات الأساسية" %}
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="name_ar" class="form-label">
+                                            {% trans "الاسم بالعربية" %} <span class="required">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="name_ar" name="name_ar"
+                                               value="{{ form_data.name_ar|default:'' }}" required
+                                               placeholder="مثال: أردوينو أونو R3">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="name_en" class="form-label">{% trans "الاسم بالإنجليزية" %}</label>
+                                        <input type="text" class="form-control" id="name_en" name="name_en"
+                                               value="{{ form_data.name_en|default:'' }}"
+                                               placeholder="Example: Arduino Uno R3">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="part_number" class="form-label">
+                                            {% trans "رقم القطعة" %} <span class="required">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="part_number" name="part_number"
+                                               value="{{ form_data.part_number|default:'' }}" required
+                                               placeholder="مثال: ARD-UNO-R3">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="category" class="form-label">{% trans "الفئة" %}</label>
+                                        <select class="form-select" id="category" name="category">
+                                            {% for cat in categories %}
+                                            <option value="{{ cat.id }}" {% if form_data.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ cat.name_ar }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="manufacturer" class="form-label">{% trans "الشركة المصنعة" %}</label>
+                                        <input type="text" class="form-control" id="manufacturer" name="manufacturer"
+                                               value="{{ form_data.manufacturer|default:'' }}"
+                                               placeholder="مثال: Arduino">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="model" class="form-label">{% trans "الموديل" %}</label>
+                                        <input type="text" class="form-control" id="model" name="model"
+                                               value="{{ form_data.model|default:'' }}"
+                                               placeholder="مثال: Uno R3">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Description Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-align-left me-2"></i>
+                                    {% trans "الوصف" %}
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="description_ar" class="form-label">{% trans "الوصف بالعربية" %}</label>
+                                        <textarea class="form-control" id="description_ar" name="description_ar" rows="3"
+                                                  placeholder="وصف مفصل عن القطعة وخصائصها">{{ form_data.description_ar|default:'' }}</textarea>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="description_en" class="form-label">{% trans "الوصف بالإنجليزية" %}</label>
+                                        <textarea class="form-control" id="description_en" name="description_en" rows="3"
+                                                  placeholder="Detailed description of the part and its features">{{ form_data.description_en|default:'' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Inventory Information Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-warehouse me-2"></i>
+                                    {% trans "معلومات المخزون" %}
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="total_quantity" class="form-label">
+                                            {% trans "الكمية الإجمالية" %} <span class="required">*</span>
+                                        </label>
+                                        <input type="number" class="form-control" id="total_quantity" name="total_quantity"
+                                               value="{{ form_data.total_quantity|default:'1' }}" min="1" required>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="minimum_stock" class="form-label">{% trans "الحد الأدنى للمخزون" %}</label>
+                                        <input type="number" class="form-control" id="minimum_stock" name="minimum_stock"
+                                               value="{{ form_data.minimum_stock|default:'1' }}" min="1">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="condition" class="form-label">{% trans "الحالة" %}</label>
+                                        <select class="form-select" id="condition" name="condition">
+                                            {% for value, label in conditions %}
+                                            <option value="{{ value }}" {% if form_data.condition == value %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Location Information Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    {% trans "معلومات الموقع" %}
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="location" class="form-label">{% trans "موقع التخزين" %}</label>
+                                        <input type="text" class="form-control" id="location" name="location"
+                                               value="{{ form_data.location|default:'' }}"
+                                               placeholder="مثال: المخزن الرئيسي">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="shelf_number" class="form-label">{% trans "رقم الرف" %}</label>
+                                        <input type="text" class="form-control" id="shelf_number" name="shelf_number"
+                                               value="{{ form_data.shelf_number|default:'' }}"
+                                               placeholder="مثال: A1-001">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Purchase Information Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-shopping-cart me-2"></i>
+                                    {% trans "معلومات الشراء" %}
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="purchase_price" class="form-label">{% trans "سعر الشراء" %}</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="purchase_price" name="purchase_price"
+                                                   value="{{ form_data.purchase_price|default:'' }}" step="0.01" min="0"
+                                                   placeholder="0.00">
+                                            <span class="input-group-text">{% trans "ريال" %}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8 mb-3">
+                                        <label for="supplier" class="form-label">{% trans "المورد" %}</label>
+                                        <input type="text" class="form-control" id="supplier" name="supplier"
+                                               value="{{ form_data.supplier|default:'' }}"
+                                               placeholder="مثال: شركة الإلكترونيات المتقدمة">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notes Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-sticky-note me-2"></i>
+                                    {% trans "ملاحظات إضافية" %}
+                                </h5>
+                                <div class="mb-3">
+                                    <label for="notes" class="form-label">{% trans "ملاحظات" %}</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3"
+                                              placeholder="أي ملاحظات إضافية حول القطعة...">{{ form_data.notes|default:'' }}</textarea>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="row">
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg me-3">
+                                        <i class="fas fa-save me-2"></i>
+                                        {% trans "حفظ القطعة" %}
+                                    </button>
+                                    <a href="/inventory/" class="btn btn-secondary btn-lg">
+                                        <i class="fas fa-times me-2"></i>
+                                        {% trans "إلغاء" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-generate part number based on name and category
+            const nameAr = document.getElementById('name_ar');
+            const category = document.getElementById('category');
+            const partNumber = document.getElementById('part_number');
+
+            function generatePartNumber() {
+                if (nameAr.value && !partNumber.value) {
+                    const categoryPrefix = category.options[category.selectedIndex].text.substring(0, 3).toUpperCase();
+                    const namePrefix = nameAr.value.substring(0, 5).replace(/\s+/g, '-').toUpperCase();
+                    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                    partNumber.value = `${categoryPrefix}-${namePrefix}-${randomSuffix}`;
+                }
+            }
+
+            nameAr.addEventListener('blur', generatePartNumber);
+            category.addEventListener('change', generatePartNumber);
+
+            // Form validation
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const requiredFields = form.querySelectorAll('[required]');
+                let allValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        allValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!allValid) {
+                    e.preventDefault();
+                    alert('يرجى ملء جميع الحقول المطلوبة');
+                }
+            });
+
+            // Auto-set minimum stock based on total quantity
+            const totalQuantity = document.getElementById('total_quantity');
+            const minimumStock = document.getElementById('minimum_stock');
+
+            totalQuantity.addEventListener('change', function() {
+                if (!minimumStock.value || minimumStock.value == 1) {
+                    const suggested = Math.max(1, Math.floor(parseInt(this.value) * 0.2));
+                    minimumStock.value = suggested;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "تعديل" %} {{ part.name_ar }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .section-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .required {
+        color: var(--danger-color);
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-group-justified {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-group-justified .btn {
+        flex: 1;
+    }
+
+    .part-preview {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .quantity-indicator {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .quantity-good { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+    .quantity-warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+    .quantity-danger { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inventory-edit-part">
+    <!-- Navigation -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/inventory/">{% trans "المخزون" %}</a></li>
+                    <li class="breadcrumb-item"><a href="/inventory/parts/">{% trans "القطع" %}</a></li>
+                    <li class="breadcrumb-item"><a href="/inventory/parts/{{ part.id }}/">{{ part.name_ar }}</a></li>
+                    <li class="breadcrumb-item active">{% trans "تعديل" %}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-1">
+                                <i class="fas fa-edit text-primary me-2"></i>
+                                {% trans "تعديل القطعة" %}
+                            </h1>
+                            <p class="text-muted mb-0">{{ part.name_ar }} ({{ part.part_number }})</p>
+                        </div>
+                        <div>
+                            <a href="/inventory/parts/{{ part.id }}/" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                {% trans "العودة لتفاصيل القطعة" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Part Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="part-preview">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-1">{% trans "القطعة الحالية" %}: {{ part.name_ar }}</h6>
+                        <small class="text-muted">
+                            {{ part.part_number }} |
+                            {% for cat in categories %}
+                                {% if cat.id == part.category_id %}{{ cat.name_ar }}{% endif %}
+                            {% endfor %}
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <span class="quantity-indicator {% if part.available_quantity > part.minimum_stock %}quantity-good{% elif part.available_quantity > 0 %}quantity-warning{% else %}quantity-danger{% endif %}">
+                            {{ part.available_quantity }}/{{ part.total_quantity }} {% trans "متاح" %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit text-primary me-2"></i>
+                        {% trans "تعديل معلومات القطعة" %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-info-circle me-2"></i>
+                                {% trans "المعلومات الأساسية" %}
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="name_ar" class="form-label">
+                                        {% trans "الاسم بالعربية" %} <span class="required">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="name_ar" name="name_ar"
+                                           value="{{ part.name_ar }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="name_en" class="form-label">{% trans "الاسم بالإنجليزية" %}</label>
+                                    <input type="text" class="form-control" id="name_en" name="name_en"
+                                           value="{{ part.name_en|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="part_number" class="form-label">
+                                        {% trans "رقم القطعة" %} <span class="required">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="part_number" name="part_number"
+                                           value="{{ part.part_number }}" required readonly>
+                                    <small class="text-muted">{% trans "رقم القطعة لا يمكن تغييره" %}</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="category" class="form-label">{% trans "الفئة" %}</label>
+                                    <select class="form-select" id="category" name="category">
+                                        {% for cat in categories %}
+                                        <option value="{{ cat.id }}" {% if cat.id == part.category_id %}selected{% endif %}>
+                                            {{ cat.name_ar }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="manufacturer" class="form-label">{% trans "الشركة المصنعة" %}</label>
+                                    <input type="text" class="form-control" id="manufacturer" name="manufacturer"
+                                           value="{{ part.manufacturer|default:'' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="model" class="form-label">{% trans "الموديل" %}</label>
+                                    <input type="text" class="form-control" id="model" name="model"
+                                           value="{{ part.model|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-align-left me-2"></i>
+                                {% trans "الوصف" %}
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="description_ar" class="form-label">{% trans "الوصف بالعربية" %}</label>
+                                    <textarea class="form-control" id="description_ar" name="description_ar" rows="3">{{ part.description_ar|default:'' }}</textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="description_en" class="form-label">{% trans "الوصف بالإنجليزية" %}</label>
+                                    <textarea class="form-control" id="description_en" name="description_en" rows="3">{{ part.description_en|default:'' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inventory Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-warehouse me-2"></i>
+                                {% trans "معلومات المخزون" %}
+                            </h5>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>{% trans "الكمية المتاحة الحالية" %}:</strong> {{ part.available_quantity }} |
+                                <strong>{% trans "الكمية الإجمالية الحالية" %}:</strong> {{ part.total_quantity }}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="total_quantity" class="form-label">
+                                        {% trans "الكمية الإجمالية الجديدة" %} <span class="required">*</span>
+                                    </label>
+                                    <input type="number" class="form-control" id="total_quantity" name="total_quantity"
+                                           value="{{ part.total_quantity }}" min="0" required>
+                                    <small class="text-muted">{% trans "تغيير هذا سيؤثر على الكمية المتاحة" %}</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="minimum_stock" class="form-label">{% trans "الحد الأدنى للمخزون" %}</label>
+                                    <input type="number" class="form-control" id="minimum_stock" name="minimum_stock"
+                                           value="{{ part.minimum_stock }}" min="1">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="condition" class="form-label">{% trans "الحالة" %}</label>
+                                    <select class="form-select" id="condition" name="condition">
+                                        {% for value, label in conditions %}
+                                        <option value="{{ value }}" {% if part.condition == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="status" class="form-label">{% trans "حالة التوفر" %}</label>
+                                    <select class="form-select" id="status" name="status">
+                                        {% for value, label in statuses %}
+                                        <option value="{{ value }}" {% if part.status == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                {% trans "معلومات الموقع" %}
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="location" class="form-label">{% trans "موقع التخزين" %}</label>
+                                    <input type="text" class="form-control" id="location" name="location"
+                                           value="{{ part.location|default:'' }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="shelf_number" class="form-label">{% trans "رقم الرف" %}</label>
+                                    <input type="text" class="form-control" id="shelf_number" name="shelf_number"
+                                           value="{{ part.shelf_number|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Purchase Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                {% trans "معلومات الشراء" %}
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="purchase_price" class="form-label">{% trans "سعر الشراء" %}</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="purchase_price" name="purchase_price"
+                                               value="{{ part.purchase_price|default:'' }}" step="0.01" min="0">
+                                        <span class="input-group-text">{% trans "ريال" %}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label for="supplier" class="form-label">{% trans "المورد" %}</label>
+                                    <input type="text" class="form-control" id="supplier" name="supplier"
+                                           value="{{ part.supplier|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-sticky-note me-2"></i>
+                                {% trans "ملاحظات" %}
+                            </h5>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">{% trans "ملاحظات إضافية" %}</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3">{{ part.notes|default:'' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="btn-group-justified">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-save me-2"></i>
+                                        {% trans "حفظ التغييرات" %}
+                                    </button>
+                                    <a href="/inventory/parts/{{ part.id }}/" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fas fa-times me-2"></i>
+                                        {% trans "إلغاء" %}
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-lg" onclick="resetForm()">
+                                        <i class="fas fa-undo me-2"></i>
+                                        {% trans "إعادة تعيين" %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Changes Preview Modal -->
+<div class="modal fade" id="changesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye text-info me-2"></i>
+                    {% trans "معاينة التغييرات" %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="changesContent">
+                    <!-- Changes will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% trans "إغلاق" %}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="fas fa-save me-1"></i>
+                    {% trans "تأكيد الحفظ" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Store original values for comparison
+    const originalValues = {
+        name_ar: '{{ part.name_ar|escapejs }}',
+        name_en: '{{ part.name_en|default:""|escapejs }}',
+        manufacturer: '{{ part.manufacturer|default:""|escapejs }}',
+        model: '{{ part.model|default:""|escapejs }}',
+        description_ar: '{{ part.description_ar|default:""|escapejs }}',
+        description_en: '{{ part.description_en|default:""|escapejs }}',
+        total_quantity: {{ part.total_quantity }},
+        minimum_stock: {{ part.minimum_stock }},
+        condition: '{{ part.condition|escapejs }}',
+        status: '{{ part.status|escapejs }}',
+        location: '{{ part.location|default:""|escapejs }}',
+        shelf_number: '{{ part.shelf_number|default:""|escapejs }}',
+        purchase_price: {{ part.purchase_price|default:"0" }},
+        supplier: '{{ part.supplier|default:""|escapejs }}',
+        notes: '{{ part.notes|default:""|escapejs }}'
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation and enhancement
+        const form = document.querySelector('form');
+        const totalQuantityInput = document.getElementById('total_quantity');
+        const minimumStockInput = document.getElementById('minimum_stock');
+
+        // Auto-suggest minimum stock based on total quantity
+        totalQuantityInput.addEventListener('change', function() {
+            const currentMinimum = parseInt(minimumStockInput.value);
+            const newTotal = parseInt(this.value);
+
+            if (!currentMinimum || currentMinimum === 1) {
+                const suggested = Math.max(1, Math.floor(newTotal * 0.2));
+                minimumStockInput.value = suggested;
+
+                // Show suggestion tooltip
+                showTooltip(minimumStockInput, `{% trans "اقتراح: " %}${suggested} (20% {% trans "من الكمية الإجمالية" %})`);
+            }
+        });
+
+        // Highlight changed fields
+        document.querySelectorAll('input, select, textarea').forEach(input => {
+            const originalKey = input.name;
+            if (originalValues.hasOwnProperty(originalKey)) {
+                input.addEventListener('change', function() {
+                    const currentValue = this.value.toString();
+                    const originalValue = originalValues[originalKey].toString();
+
+                    if (currentValue !== originalValue) {
+                        this.classList.add('border-warning');
+                        this.classList.add('bg-warning-subtle');
+                    } else {
+                        this.classList.remove('border-warning');
+                        this.classList.remove('bg-warning-subtle');
+                    }
+                });
+            }
+        });
+
+        // Form submission with validation
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Check for changes
+            const changes = getChanges();
+            if (Object.keys(changes).length === 0) {
+                alert('{% trans "لم يتم إجراء أي تغييرات" %}');
+                return;
+            }
+
+            // Show changes preview
+            showChangesPreview(changes);
+        });
+
+        // Auto-save draft (optional)
+        let saveTimeout;
+        document.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('input', function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    saveDraft();
+                }, 2000);
+            });
+        });
+    });
+
+    function getChanges() {
+        const changes = {};
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+
+        for (const [key, value] of formData.entries()) {
+            if (originalValues.hasOwnProperty(key)) {
+                const currentValue = value.toString();
+                const originalValue = originalValues[key].toString();
+
+                if (currentValue !== originalValue) {
+                    changes[key] = {
+                        old: originalValue,
+                        new: currentValue
+                    };
+                }
+            }
+        }
+
+        return changes;
+    }
+
+    function showChangesPreview(changes) {
+        const modal = new bootstrap.Modal(document.getElementById('changesModal'));
+        const content = document.getElementById('changesContent');
+
+        let html = '<div class="table-responsive"><table class="table table-sm">';
+        html += '<thead><tr><th>{% trans "الحقل" %}</th><th>{% trans "القيمة السابقة" %}</th><th>{% trans "القيمة الجديدة" %}</th></tr></thead><tbody>';
+
+        const fieldNames = {
+            name_ar: '{% trans "الاسم العربي" %}',
+            name_en: '{% trans "الاسم الإنجليزي" %}',
+            manufacturer: '{% trans "الشركة المصنعة" %}',
+            model: '{% trans "الموديل" %}',
+            total_quantity: '{% trans "الكمية الإجمالية" %}',
+            minimum_stock: '{% trans "الحد الأدنى" %}',
+            condition: '{% trans "الحالة" %}',
+            status: '{% trans "حالة التوفر" %}',
+            location: '{% trans "الموقع" %}',
+            supplier: '{% trans "المورد" %}'
+        };
+
+        for (const [key, change] of Object.entries(changes)) {
+            const fieldName = fieldNames[key] || key;
+            html += `<tr>
+                <td><strong>${fieldName}</strong></td>
+                <td><span class="text-muted">${change.old || '---'}</span></td>
+                <td><span class="text-primary">${change.new || '---'}</span></td>
+            </tr>`;
+        }
+
+        html += '</tbody></table></div>';
+        content.innerHTML = html;
+        modal.show();
+    }
+
+    function submitForm() {
+        document.querySelector('form').submit();
+    }
+
+    function resetForm() {
+        if (confirm('{% trans "هل أنت متأكد من إعادة تعيين جميع التغييرات؟" %}')) {
+            // Reset to original values
+            for (const [key, value] of Object.entries(originalValues)) {
+                const input = document.querySelector(`[name="${key}"]`);
+                if (input) {
+                    input.value = value;
+                    input.classList.remove('border-warning', 'bg-warning-subtle');
+                }
+            }
+        }
+    }
+
+    function showTooltip(element, message) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'position-absolute bg-info text-white rounded px-2 py-1 small';
+        tooltip.style.cssText = 'z-index: 1050; bottom: 100%; left: 0; white-space: nowrap;';
+        tooltip.textContent = message;
+
+        element.parentNode.style.position = 'relative';
+        element.parentNode.appendChild(tooltip);
+
+        setTimeout(() => {
+            tooltip.remove();
+        }, 3000);
+    }
+
+    function saveDraft() {
+        // Save current form state to localStorage (optional feature)
+        const formData = {};
+        document.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.name) {
+                formData[input.name] = input.value;
+            }
+        });
+
+        localStorage.setItem('edit_part_draft_{{ part.id }}', JSON.stringify(formData));
+        console.log('{% trans "تم حفظ المسودة" %}');
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + S to save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            document.querySelector('form').dispatchEvent(new Event('submit'));
+        }
+
+        // Ctrl + R to reset
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            resetForm();
+        }
+
+        // Escape to cancel
+        if (e.key === 'Escape') {
+            if (confirm('{% trans "هل تريد إلغاء التعديل والعودة؟" %}')) {
+                window.location.href = '/inventory/parts/{{ part.id }}/';
+            }
+        }
+    });
+
+    // Show keyboard shortcuts hint
+    console.log('💡 {% trans "اختصارات لوحة المفاتيح" %}: Ctrl+S ({% trans "حفظ" %}), Ctrl+R ({% trans "إعادة تعيين" %}), Escape ({% trans "إلغاء" %})');
+</script>
+{% endblock %}

@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_filters',
     'rest_framework',
+'mathfilters',
 
     # Local apps
     'core',

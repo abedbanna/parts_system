@@ -1,82 +1,547 @@
 {% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
 
-{% block title %}لوحة تحكم الإدارة - {{ block.super }}{% endblock %}
+{% block title %}{% trans "لوحة إدارة نظام الاستعارة" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        text-align: center;
+        padding: 2rem 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin: 0 auto 1rem;
+    }
+
+    .status-pending { background: linear-gradient(135deg, #f39c12, #f1c40f); }
+    .status-approved { background: linear-gradient(135deg, #28a745, #20c997); }
+    .status-rejected { background: linear-gradient(135deg, #dc3545, #fd7e83); }
+    .status-overdue { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+    .request-item {
+        border-right: 4px solid #e9ecef;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px !important;
+    }
+
+    .request-item:hover {
+        border-right-color: var(--primary-color);
+        background-color: #f8f9fa;
+        transform: translateX(-5px);
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+
+    .quick-action-btn {
+        transition: all 0.3s ease;
+    }
+
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .table {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .admin-dashboard .card {
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state {
+        padding: 3rem 1rem;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-slide-up {
+        animation: slideInUp 0.5s ease forwards;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="fw-bold mb-4">
-            <i class="fas fa-cogs me-2"></i>
-            لوحة تحكم الإدارة
-        </h1>
+<div class="admin-dashboard">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-users-cog text-primary me-2"></i>
+                        {% trans "لوحة إدارة نظام الاستعارة" %}
+                    </h1>
+                    <p class="text-muted mb-0">{% trans "إدارة طلبات الاستعارة والموافقات" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up">
+                <div class="stats-icon status-pending">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h4 class="fw-bold">{{ total_pending|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "طلبات معلقة" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.1s;">
+                <div class="stats-icon status-approved">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h4 class="fw-bold">{{ total_active|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "استعارات نشطة" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.2s;">
+                <div class="stats-icon status-overdue">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 class="fw-bold">{{ total_overdue|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "متأخرة" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.3s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #6c757d, #495057);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h4 class="fw-bold">{% if all_requests %}{{ all_requests|length }}{% else %}0{% endif %}</h4>
+                <p class="text-muted mb-0">{% trans "إجمالي الطلبات" %}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        {% trans "إجراءات سريعة" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="/inventory/" class="btn btn-primary w-100 quick-action-btn">
+                                <i class="fas fa-boxes me-2"></i>
+                                {% trans "إدارة المخزون" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="/inventory/add/" class="btn btn-success w-100 quick-action-btn">
+                                <i class="fas fa-plus me-2"></i>
+                                {% trans "إضافة قطعة" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="/borrowing/debug/requests/" class="btn btn-info w-100 quick-action-btn">
+                                <i class="fas fa-eye me-2"></i>
+                                {% trans "عرض البيانات" %}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-danger w-100 quick-action-btn" onclick="clearTempStorage()">
+                                <i class="fas fa-trash me-2"></i>
+                                {% trans "مسح البيانات" %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock text-warning me-2"></i>
+                        {% trans "طلبات تحتاج موافقة" %}
+                    </h5>
+                    <span class="badge bg-warning">{% if pending_requests %}{{ pending_requests|length }}{% else %}0{% endif %}</span>
+                </div>
+                <div class="card-body">
+                    {% if pending_requests %}
+                        {% for request in pending_requests %}
+                        <div class="request-item border rounded p-3 mb-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="user-avatar">
+                                        {{ request.user_name|first|upper|default:"?" }}
+                                    </div>
+                                    <small class="text-muted d-block mt-1">
+                                        #{{ request.id }}
+                                    </small>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6 class="mb-1">{{ request.user_name|default:"مستخدم غير معروف" }}</h6>
+                                    <p class="text-muted mb-1 small">{{ request.purpose|truncatechars:50|default:"لا يوجد وصف" }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ request.expected_return_date|default:"غير محدد" }}
+                                    </small>
+                                </div>
+                                <div class="col-md-3">
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-microchip me-1"></i>
+                                        {{ request.total_parts|default:0 }} {% trans "قطعة" %}
+                                    </span>
+                                    <small class="d-block text-muted mt-1">
+                                        {{ request.created_at|default:"" }}
+                                    </small>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <button class="btn btn-success btn-sm me-1" onclick="approveRequest({{ request.id }})">
+                                        <i class="fas fa-check"></i> {% trans "موافقة" %}
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectRequest({{ request.id }})">
+                                        <i class="fas fa-times"></i> {% trans "رفض" %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center empty-state">
+                            <div class="icon-circle mx-auto mb-3" style="background: linear-gradient(135deg, #6c757d, #495057);">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <h5 class="text-muted">{% trans "لا توجد طلبات معلقة" %}</h5>
+                            <p class="text-muted">{% trans "سيظهر هنا جميع الطلبات التي تحتاج إلى موافقة" %}</p>
+                            <a href="/borrowing/create/" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>
+                                {% trans "إضافة طلب تجريبي" %}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        {% trans "النشاط الأخير" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if all_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "المعرف" %}</th>
+                                    <th>{% trans "الطالب" %}</th>
+                                    <th>{% trans "الغرض" %}</th>
+                                    <th>{% trans "عدد القطع" %}</th>
+                                    <th>{% trans "تاريخ الإنشاء" %}</th>
+                                    <th>{% trans "الحالة" %}</th>
+                                    <th>{% trans "إجراءات" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in all_requests %}
+                                <tr>
+                                    <td><strong>#{{ request.id }}</strong></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                                {{ request.user_name|first|upper|default:"?" }}
+                                            </div>
+                                            {{ request.user_name|default:"مستخدم غير معروف" }}
+                                        </div>
+                                    </td>
+                                    <td>{{ request.purpose|truncatechars:30|default:"لا يوجد وصف" }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ request.total_parts|default:0 }}</span>
+                                    </td>
+                                    <td>{{ request.created_at|default:"" }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">{% trans "معلقة" %}</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">{% trans "موافق عليها" %}</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">{% trans "مرفوضة" %}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ request.status|default:"غير معروف" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                        <button class="btn btn-success btn-sm me-1" onclick="approveRequest({{ request.id }})" title="{% trans 'موافقة' %}">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="rejectRequest({{ request.id }})" title="{% trans 'رفض' %}">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% else %}
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewRequest({{ request.id }})" title="{% trans 'عرض' %}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">{% trans "لا توجد طلبات حتى الآن" %}</p>
+                        <a href="/borrowing/create/" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            {% trans "إنشاء طلب تجريبي" %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="card-title">{{ total_pending }}</h4>
-                        <p class="card-text">طلبات قيد المراجعة</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x"></i>
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle text-danger me-2"></i>
+                    {% trans "رفض الطلب" %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="rejectForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label">{% trans "سبب الرفض" %}</label>
+                        <textarea class="form-control" id="rejectReason" name="reason" rows="3" required
+                                  placeholder="{% trans 'يرجى تقديم سبب واضح لرفض الطلب...' %}"></textarea>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="card-title">{{ total_active }}</h4>
-                        <p class="card-text">استعارات نشطة</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-hand-paper fa-2x"></i>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {% trans "إلغاء" %}
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times me-1"></i>
+                        {% trans "رفض الطلب" %}
+                    </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card text-white bg-danger">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="card-title">{{ total_overdue }}</h4>
-                        <p class="card-text">متأخرة عن الموعد</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-exclamation-triangle fa-2x"></i>
-                    </div>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">الطلبات القريبة</h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center py-5">
-                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">لا توجد طلبات قيد المراجعة</h4>
-                    <p class="text-muted">جميع الطلبات تم معالجتها</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_js %}
+<script>
+    // Global variables
+    let currentRequestId = null;
+
+    // Get CSRF token
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    // Approve request function
+    function approveRequest(requestId) {
+        if (confirm('{% trans "هل أنت متأكد من الموافقة على هذا الطلب؟" %}')) {
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/borrowing/admin/approve/' + requestId + '/';
+
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = getCSRFToken();
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // Reject request function
+    function rejectRequest(requestId) {
+        currentRequestId = requestId;
+        document.getElementById('rejectForm').action = '/borrowing/admin/reject/' + requestId + '/';
+        new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    }
+
+    // View request function
+    function viewRequest(requestId) {
+        window.location.href = '/borrowing/requests/' + requestId + '/';
+    }
+
+    // Clear temp storage function
+    function clearTempStorage() {
+        if (confirm('{% trans "هل أنت متأكد من مسح جميع البيانات المؤقتة؟ هذا الإجراء لا يمكن التراجع عنه." %}')) {
+            window.location.href = '/borrowing/debug/clear/';
+        }
+    }
+
+    // Enhanced notification system
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(notification);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 150);
+            }
+        }, 5000);
+    }
+
+    // Page initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add loading states to action buttons
+        const actionButtons = document.querySelectorAll('.btn-success, .btn-danger');
+        actionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if (!this.classList.contains('loading') && this.onclick) {
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% trans "جاري المعالجة..." %}';
+                    this.disabled = true;
+                    this.classList.add('loading');
+
+                    // Re-enable after 5 seconds as fallback
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                        this.classList.remove('loading');
+                    }, 5000);
+                }
+            });
+        });
+
+        // Enhanced stats animation
+        const statsCards = document.querySelectorAll('.stats-card');
+        statsCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 150);
+        });
+
+        // Real-time stats update
+        function updateStats() {
+            fetch('/borrowing/debug/requests/')
+                .then(response => response.json())
+                .then(data => {
+                    const pending = data.requests.filter(req => req.status === 'pending').length;
+                    const approved = data.requests.filter(req => req.status === 'approved').length;
+                    const total = data.requests.length;
+
+                    // Update stats if elements exist
+                    const pendingEl = document.querySelector('.stats-card:nth-child(1) h4');
+                    const approvedEl = document.querySelector('.stats-card:nth-child(2) h4');
+                    const totalEl = document.querySelector('.stats-card:nth-child(4) h4');
+
+                    if (pendingEl) pendingEl.textContent = pending;
+                    if (approvedEl) approvedEl.textContent = approved;
+                    if (totalEl) totalEl.textContent = total;
+                })
+                .catch(console.error);
+        }
+
+        // Update stats every 30 seconds
+        setInterval(updateStats, 30000);
+
+        // Auto refresh page every 2 minutes if no modal is open
+        setInterval(() => {
+            if (!document.querySelector('.modal.show')) {
+                updateStats(); // Just update stats instead of full reload
+            }
+        }, 120000);
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Alt + R to refresh data
+        if (e.altKey && e.key === 'r') {
+            e.preventDefault();
+            location.reload();
+        }
+
+        // Alt + C to clear storage
+        if (e.altKey && e.key === 'c') {
+            e.preventDefault();
+            clearTempStorage();
+        }
+    });
+</script>
 {% endblock %}

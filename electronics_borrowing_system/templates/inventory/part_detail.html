@@ -1,41 +1,293 @@
 {% extends 'base.html' %}
-
-{% block title %}تفاصيل القطعة - {{ block.super }}{% endblock %}
+{% load i18n %}
+{% load static %}
+{% load mathfilters %}
+{% block title %}{{ part.name_ar }} - {% trans "تفاصيل القطعة" %}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="fw-bold">
-                <i class="fas fa-microchip me-2"></i>
-                تفاصيل القطعة
-            </h1>
-            <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>
-                العودة للقائمة
-            </a>
+<div class="inventory-part-detail">
+    <!-- Navigation -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/inventory/">{% trans "المخزون" %}</a></li>
+                    <li class="breadcrumb-item"><a href="/inventory/parts/">{% trans "القطع" %}</a></li>
+                    <li class="breadcrumb-item active">{{ part.name_ar }}</li>
+                </ol>
+            </nav>
         </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-microchip fa-3x text-primary mb-3"></i>
-                <h4>صفحة تفاصيل القطعة</h4>
-                <p class="text-muted">معرف القطعة: {{ part_id }}</p>
-
-                {% if can_borrow %}
-                <div class="mt-4">
-                    <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
-                        <i class="fas fa-hand-paper me-2"></i>
-                        طلب استعارة
-                    </a>
+    <!-- Part Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">{{ part.name_ar }}</h4>
+                        <span class="badge bg-{% if part.status == 'available' %}success{% elif part.status == 'borrowed' %}warning{% else %}secondary{% endif %} fs-6">
+                            {% if part.status == 'available' %}{% trans "متاح" %}
+                            {% elif part.status == 'borrowed' %}{% trans "مُستعار" %}
+                            {% elif part.status == 'maintenance' %}{% trans "تحت الصيانة" %}
+                            {% else %}{{ part.status }}{% endif %}
+                        </span>
+                    </div>
                 </div>
-                {% endif %}
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">{% trans "المعلومات الأساسية" %}</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>{% trans "رقم القطعة" %}:</strong></td>
+                                    <td>{{ part.part_number }}</td>
+                                </tr>
+                                {% if part.name_en %}
+                                <tr>
+                                    <td><strong>{% trans "الاسم الإنجليزي" %}:</strong></td>
+                                    <td>{{ part.name_en }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if part.manufacturer %}
+                                <tr>
+                                    <td><strong>{% trans "الشركة المصنعة" %}:</strong></td>
+                                    <td>{{ part.manufacturer }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if part.model %}
+                                <tr>
+                                    <td><strong>{% trans "الموديل" %}:</strong></td>
+                                    <td>{{ part.model }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if category %}
+                                <tr>
+                                    <td><strong>{% trans "الفئة" %}:</strong></td>
+                                    <td>
+                                        <i class="{{ category.icon }} me-1"></i>
+                                        {{ category.name_ar }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">{% trans "المخزون والحالة" %}</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>{% trans "الكمية المتاحة" %}:</strong></td>
+                                    <td>
+                                        <span class="badge bg-{% if part.available_quantity > part.minimum_stock %}success{% else %}warning{% endif %}">
+                                            {{ part.available_quantity }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>{% trans "الكمية الإجمالية" %}:</strong></td>
+                                    <td>{{ part.total_quantity }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>{% trans "الحد الأدنى" %}:</strong></td>
+                                    <td>{{ part.minimum_stock }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>{% trans "الحالة" %}:</strong></td>
+                                    <td>
+                                        {% if part.condition == 'excellent' %}{% trans "ممتاز" %}
+                                        {% elif part.condition == 'good' %}{% trans "جيد" %}
+                                        {% elif part.condition == 'fair' %}{% trans "مقبول" %}
+                                        {% elif part.condition == 'damaged' %}{% trans "تالف" %}
+                                        {% else %}{{ part.condition }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% if part.location %}
+                                <tr>
+                                    <td><strong>{% trans "الموقع" %}:</strong></td>
+                                    <td>
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        {{ part.location }}
+                                        {% if part.shelf_number %}- {{ part.shelf_number }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if part.description_ar %}
+                    <div class="mb-4">
+                        <h6 class="text-muted">{% trans "الوصف" %}</h6>
+                        <p>{{ part.description_ar }}</p>
+                        {% if part.description_en %}
+                        <p class="text-muted"><em>{{ part.description_en }}</em></p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if part.notes %}
+                    <div class="mb-4">
+                        <h6 class="text-muted">{% trans "ملاحظات" %}</h6>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            {{ part.notes }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Actions Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">{% trans "إجراءات" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/inventory/parts/{{ part.id }}/edit/" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>
+                            {% trans "تعديل القطعة" %}
+                        </a>
+                        {% if part.available_quantity > 0 %}
+                        <button class="btn btn-success" onclick="borrowPart()">
+                            <i class="fas fa-hand-holding me-2"></i>
+                            {% trans "استعارة" %}
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-danger" onclick="deletePart()">
+                            <i class="fas fa-trash me-2"></i>
+                            {% trans "حذف القطعة" %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase Information -->
+            {% if part.purchase_price or part.supplier %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">{% trans "معلومات الشراء" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% if part.purchase_price %}
+                    <p><strong>{% trans "السعر" %}:</strong> {{ part.purchase_price }} {% trans "ريال" %}</p>
+                    {% endif %}
+                    {% if part.supplier %}
+                    <p><strong>{% trans "المورد" %}:</strong> {{ part.supplier }}</p>
+                    {% endif %}
+                    {% if part.purchase_price and part.total_quantity %}
+                    <p><strong>{% trans "القيمة الإجمالية" %}:</strong>
+                        {{ part.purchase_price|floatformat:2 }} × {{ part.total_quantity }} =
+                        <strong>{{ part.purchase_price|mul:part.total_quantity|floatformat:2 }} {% trans "ريال" %}</strong>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">{% trans "إحصائيات سريعة" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h4 class="text-primary mb-0">{{ part.available_quantity }}</h4>
+                                    <small class="text-muted">{% trans "متاح" %}</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-secondary mb-0">{{ part.total_quantity|sub:part.available_quantity }}</h4>
+                                <small class="text-muted">{% trans "مُستعار" %}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if part.available_quantity <= part.minimum_stock %}
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <small>{% trans "المخزون منخفض!" %}</small>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                    {% trans "تأكيد الحذف" %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans "هل أنت متأكد من حذف هذه القطعة؟" %}</p>
+                <p><strong>{{ part.name_ar }}</strong> ({{ part.part_number }})</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% trans "هذا الإجراء لا يمكن التراجع عنه!" %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% trans "إلغاء" %}
+                </button>
+                <form method="post" action="/inventory/parts/{{ part.id }}/delete/" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>
+                        {% trans "حذف القطعة" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deletePart() {
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    function borrowPart() {
+        // Redirect to borrowing system with this part pre-selected
+        const partName = '{{ part.name_ar|escapejs }}';
+        const partNumber = '{{ part.part_number|escapejs }}';
+
+        if (confirm('{% trans "هل تريد إنشاء طلب استعارة لهذه القطعة؟" %}')) {
+            // You can enhance this to pre-fill the borrowing form
+            window.location.href = '/borrowing/create/?part=' + encodeURIComponent(partName);
+        }
+    }
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Alt + E to edit
+        if (e.altKey && e.key === 'e') {
+            e.preventDefault();
+            window.location.href = '/inventory/parts/{{ part.id }}/edit/';
+        }
+
+        // Alt + B to borrow (if available)
+        {% if part.available_quantity > 0 %}
+        if (e.altKey && e.key === 'b') {
+            e.preventDefault();
+            borrowPart();
+        }
+        {% endif %}
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "إدارة المخزون" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        text-align: center;
+        padding: 2rem 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        margin: 0 auto 1rem;
+    }
+
+    .quick-action-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        text-decoration: none;
+        color: white;
+        display: block;
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        color: white;
+    }
+
+    .list-group-item {
+        border-radius: 10px !important;
+        border: none;
+        margin-bottom: 5px;
+        background: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: translateX(-5px);
+    }
+
+    .progress {
+        border-radius: 10px;
+        height: 8px;
+    }
+
+    .empty-state {
+        padding: 3rem 1rem;
+    }
+
+    .category-item {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+    }
+
+    .category-item:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: translateX(-3px);
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-slide-up {
+        animation: slideInUp 0.5s ease forwards;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inventory-dashboard">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-boxes text-primary me-2"></i>
+                        {% trans "لوحة إدارة المخزون" %}
+                    </h1>
+                    <p class="text-muted mb-0">{% trans "إدارة القطع الإلكترونية والمخزون" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <i class="fas fa-microchip"></i>
+                </div>
+                <h4 class="fw-bold">{{ total_parts|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "إجمالي القطع" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.1s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4 class="fw-bold">{{ available_parts|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "قطع متاحة" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.2s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #f39c12, #f1c40f);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 class="fw-bold">{{ low_stock_parts|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "مخزون منخفض" %}</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card animate-slide-up" style="animation-delay: 0.3s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #dc3545, #fd7e83);">
+                    <i class="fas fa-hand-holding"></i>
+                </div>
+                <h4 class="fw-bold">{{ borrowed_parts|default:0 }}</h4>
+                <p class="text-muted mb-0">{% trans "قطع مُستعارة" %}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        {% trans "إجراءات سريعة" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="/inventory/add/" class="quick-action-card bg-primary">
+                                <div class="icon-circle" style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; margin: 0 auto 15px;">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <h6>{% trans "إضافة قطعة جديدة" %}</h6>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/inventory/parts/" class="quick-action-card bg-info">
+                                <div class="icon-circle" style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; margin: 0 auto 15px;">
+                                    <i class="fas fa-list"></i>
+                                </div>
+                                <h6>{% trans "عرض جميع القطع" %}</h6>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/inventory/low-stock/" class="quick-action-card bg-warning">
+                                <div class="icon-circle" style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; margin: 0 auto 15px;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <h6>{% trans "تقرير المخزون المنخفض" %}</h6>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="/inventory/create-sample/" class="quick-action-card bg-success">
+                                <div class="icon-circle" style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; margin: 0 auto 15px;">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <h6>{% trans "إنشاء بيانات تجريبية" %}</h6>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts -->
+    {% if low_stock_items %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% trans "تنبيهات المخزون المنخفض" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for item in low_stock_items %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ item.name_ar }}</h6>
+                                <small class="text-muted">{{ item.part_number }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-warning">{{ item.available_quantity }} متبقي</span>
+                                <small class="text-muted d-block">الحد الأدنى: {{ item.minimum_stock }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="/inventory/low-stock/" class="btn btn-warning">
+                            {% trans "عرض التقرير الكامل" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Additions & Categories -->
+    <div class="row">
+        <!-- Recent Additions -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        {% trans "الإضافات الأخيرة" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_additions %}
+                    <div class="list-group list-group-flush">
+                        {% for item in recent_additions %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ item.name_ar }}</h6>
+                                <small class="text-muted">{{ item.part_number }} | {{ item.manufacturer }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ item.total_quantity }} قطعة</span>
+                                <small class="text-muted d-block">{{ item.created_at }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center empty-state">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">{% trans "لا توجد إضافات حديثة" %}</p>
+                        <a href="/inventory/create-sample/" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            {% trans "إنشاء بيانات تجريبية" %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tags me-2"></i>
+                        {% trans "الفئات" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for category in categories %}
+                    <div class="category-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="{{ category.icon }} me-2 text-primary"></i>
+                            <span>{{ category.name_ar }}</span>
+                        </div>
+                        <span class="badge bg-secondary">
+                            {% for cat_id, count in category_stats.items %}
+                                {% if cat_id == category.id %}{{ count }}{% endif %}
+                            {% empty %}0{% endfor %}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-tags fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">{% trans "لا توجد فئات متاحة" %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate stats cards
+        const cards = document.querySelectorAll('.stats-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 150);
+        });
+
+        // Auto-refresh stats every 30 seconds
+        function updateStats() {
+            fetch('/inventory/api/stats/')
+                .then(response => response.json())
+                .then(data => {
+                    // Update stats if elements exist
+                    const statsElements = document.querySelectorAll('.stats-card h4');
+                    if (statsElements[0]) statsElements[0].textContent = data.total_parts || 0;
+                    if (statsElements[1]) statsElements[1].textContent = data.available_parts || 0;
+                    if (statsElements[2]) statsElements[2].textContent = data.low_stock_parts || 0;
+                    if (statsElements[3]) statsElements[3].textContent = data.borrowed_parts || 0;
+                })
+                .catch(error => {
+                    console.log('Stats update failed:', error);
+                });
+        }
+
+        // Update stats every 30 seconds
+        setInterval(updateStats, 30000);
+
+        // Add click animations to quick action cards
+        document.querySelectorAll('.quick-action-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Add clicked animation
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'translateY(-3px)';
+                }, 100);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Alt + A to add new part
+            if (e.altKey && e.key === 'a') {
+                e.preventDefault();
+                window.location.href = '/inventory/add/';
+            }
+
+            // Alt + L to view parts list
+            if (e.altKey && e.key === 'l') {
+                e.preventDefault();
+                window.location.href = '/inventory/parts/';
+            }
+
+            // Alt + S to create sample data
+            if (e.altKey && e.key === 's') {
+                e.preventDefault();
+                window.location.href = '/inventory/create-sample/';
+            }
+        });
+
+        // Show keyboard shortcuts hint
+        console.log('💡 Keyboard shortcuts: Alt+A (Add), Alt+L (List), Alt+S (Sample)');
+    });
+</script>
+{% endblock %}

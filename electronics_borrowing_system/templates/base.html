@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 {% load i18n %}
 {% load static %}
-<!--<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">-->
-<html dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +11,8 @@
     <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
 
     <!-- CSS -->
-<!--    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">-->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    {% if LANGUAGE_CODE == 'ar' %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
-    {% endif %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -112,6 +106,25 @@
             font-size: 1.5rem;
             margin: 0 auto 20px;
         }
+
+        .badge-notification {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-item {
+            position: relative;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -120,59 +133,124 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand text-white" href="{% url 'core:dashboard' %}">
+            <!-- Brand/Logo -->
+            <a class="navbar-brand text-white" href="/">
                 <i class="fas fa-microchip me-2"></i>
                 {% trans "مركز الإبداع" %}
             </a>
 
+            <!-- Mobile toggle button -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Main Navigation -->
                 <ul class="navbar-nav me-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'borrowing:dashboard' %}">
-                            <i class="fas fa-home me-1"></i>{% trans "الرئيسية" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'inventory:part_list' %}">
-                            <i class="fas fa-list me-1"></i>{% trans "القطع المتاحة" %}
-                        </a>
-                    </li>
+                        <!-- Admin Navigation -->
+                        {% if user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/borrowing/admin/">
+                                    <i class="fas fa-tachometer-alt me-1"></i>{% trans "إدارة الاستعارة" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/inventory/">
+                                    <i class="fas fa-boxes me-1"></i>{% trans "إدارة المخزون" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/borrowing/">
+                                    <i class="fas fa-eye me-1"></i>{% trans "واجهة الطلاب" %}
+                                </a>
+                            </li>
+                        <!-- Student Navigation -->
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/borrowing/">
+                                    <i class="fas fa-home me-1"></i>{% trans "الرئيسية" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/borrowing/create/">
+                                    <i class="fas fa-plus me-1"></i>{% trans "طلب جديد" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/borrowing/requests/">
+                                    <i class="fas fa-list me-1"></i>{% trans "طلباتي" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="/inventory/parts/">
+                                    <i class="fas fa-search me-1"></i>{% trans "القطع المتاحة" %}
+                                </a>
+                            </li>
+                        {% endif %}
                     {% endif %}
                 </ul>
 
+                <!-- Right side navigation -->
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i>
-                            {{ user.get_full_name|default:user.username }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
-                                <i class="fas fa-user-circle me-2"></i>{% trans "الملف الشخصي" %}
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
-                                <i class="fas fa-sign-out-alt me-2"></i>{% trans "تسجيل الخروج" %}
-                            </a></li>
-                        </ul>
-                    </li>
+                        <!-- Notifications (for admins) -->
+                        {% if user.is_staff %}
+                        <li class="nav-item">
+                            <a class="nav-link text-white position-relative" href="/borrowing/admin/">
+                                <i class="fas fa-bell"></i>
+                                <!-- You can add dynamic notification count here -->
+                                <span class="badge-notification">3</span>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <!-- User Menu -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>
+                                {{ user.get_full_name|default:user.username }}
+                                {% if user.is_staff %}
+                                    <small class="badge bg-warning ms-1">{% trans "مدير" %}</small>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <!-- Profile -->
+                                <li><a class="dropdown-item" href="/accounts/profile/">
+                                    <i class="fas fa-user-circle me-2"></i>{% trans "الملف الشخصي" %}
+                                </a></li>
+
+                                <!-- Admin Links -->
+                                {% if user.is_staff %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">{% trans "إدارة النظام" %}</li>
+                                <li><a class="dropdown-item" href="/admin/">
+                                    <i class="fas fa-cog me-2"></i>{% trans "لوحة Django" %}
+                                </a></li>
+                                <li><a class="dropdown-item" href="/borrowing/debug/requests/">
+                                    <i class="fas fa-bug me-2"></i>{% trans "بيانات النظام" %}
+                                </a></li>
+                                {% endif %}
+
+                                <!-- Logout -->
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/accounts/logout/">
+                                    <i class="fas fa-sign-out-alt me-2"></i>{% trans "تسجيل الخروج" %}
+                                </a></li>
+                            </ul>
+                        </li>
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'accounts:login' %}">
-                            <i class="fas fa-sign-in-alt me-1"></i>{% trans "تسجيل الدخول" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'accounts:register' %}">
-                            <i class="fas fa-user-plus me-1"></i>{% trans "إنشاء حساب" %}
-                        </a>
-                    </li>
+                        <!-- Guest Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/accounts/login/">
+                                <i class="fas fa-sign-in-alt me-1"></i>{% trans "تسجيل الدخول" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/accounts/register/">
+                                <i class="fas fa-user-plus me-1"></i>{% trans "إنشاء حساب" %}
+                            </a>
+                        </li>
                     {% endif %}
 
                     <!-- Language Selector -->
@@ -180,9 +258,13 @@
                         <a class="nav-link text-white" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-globe"></i>
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="?language=ar">العربية</a></li>
-                            <li><a class="dropdown-item" href="?language=en">English</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="?language=ar">
+                                <i class="fas fa-language me-2"></i>العربية
+                            </a></li>
+                            <li><a class="dropdown-item" href="?language=en">
+                                <i class="fas fa-language me-2"></i>English
+                            </a></li>
                         </ul>
                     </li>
                 </ul>
@@ -192,6 +274,7 @@
 
     <!-- Main Content -->
     <div class="container mt-4">
+        <!-- Messages -->
         {% if messages %}
         <div class="row">
             <div class="col-12">
@@ -206,6 +289,7 @@
         </div>
         {% endif %}
 
+        <!-- Content Block -->
         {% block content %}{% endblock %}
     </div>
 
@@ -217,7 +301,8 @@
                     <p class="mb-0">&copy; {% now "Y" %} {% trans "مركز الإبداع - نظام استعارة القطع الإلكترونية" %}</p>
                     <p class="mb-0">
                         <a href="#" class="text-white-50 text-decoration-none me-3">{% trans "سياسة الاستخدام" %}</a>
-                        <a href="#" class="text-white-50 text-decoration-none">{% trans "الدعم الفني" %}</a>
+                        <a href="#" class="text-white-50 text-decoration-none me-3">{% trans "الدعم الفني" %}</a>
+                        <a href="/admin/" class="text-white-50 text-decoration-none">{% trans "إدارة النظام" %}</a>
                     </p>
                 </div>
             </div>
@@ -226,6 +311,67 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-hide alerts after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.classList.add('fade');
+                        setTimeout(() => {
+                            alert.remove();
+                        }, 150);
+                    }
+                }, 5000);
+            });
+
+            // Add loading state to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (this.type === 'submit' || this.closest('form')) {
+                        this.classList.add('disabled');
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحميل...';
+
+                        // Re-enable after 3 seconds as fallback
+                        setTimeout(() => {
+                            this.classList.remove('disabled');
+                            this.innerHTML = originalText;
+                        }, 3000);
+                    }
+                });
+            });
+
+            // Notification counter (example)
+            {% if user.is_staff %}
+            // You can fetch real notification count via AJAX
+            function updateNotificationCount() {
+                fetch('/borrowing/debug/requests/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const pendingCount = data.requests.filter(req => req.status === 'pending').length;
+                        const badge = document.querySelector('.badge-notification');
+                        if (badge && pendingCount > 0) {
+                            badge.textContent = pendingCount;
+                            badge.style.display = 'flex';
+                        } else if (badge) {
+                            badge.style.display = 'none';
+                        }
+                    })
+                    .catch(console.error);
+            }
+
+            // Update notifications every 30 seconds
+            updateNotificationCount();
+            setInterval(updateNotificationCount, 30000);
+            {% endif %}
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

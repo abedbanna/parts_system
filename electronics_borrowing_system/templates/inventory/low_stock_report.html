@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "تقرير المخزون المنخفض" %}{% endblock %}
+
+{% block content %}
+<div class="low-stock-report">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-1">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                {% trans "تقرير المخزون المنخفض" %}
+                            </h1>
+                            <p class="text-muted mb-0">
+                                {% trans "القطع التي وصلت إلى الحد الأدنى أو أقل" %}
+                                {% if low_stock_parts %}
+                                    - <strong class="text-warning">{{ low_stock_parts|length }}</strong> {% trans "قطعة" %}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <a href="/inventory/" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                {% trans "العودة للمخزون" %}
+                            </a>
+                            <a href="/inventory/add/" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>
+                                {% trans "إضافة قطعة" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if low_stock_parts %}
+    <!-- Alert Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">{% trans "تنبيه: مخزون منخفض!" %}</h5>
+                        <p class="mb-0">
+                            {% trans "يوجد" %} <strong>{{ low_stock_parts|length }}</strong>
+                            {% trans "قطعة وصلت إلى الحد الأدنى للمخزون أو أقل. يُنصح بإعادة تعبئة المخزون." %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Items -->
+    <div class="row">
+        {% for part in low_stock_parts %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100 border-warning">
+                <div class="card-header bg-warning bg-opacity-10 border-warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ part.name_ar }}</h6>
+                        <span class="badge bg-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            {% trans "منخفض" %}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">{{ part.part_number }}</p>
+
+                    {% if part.description_ar %}
+                    <p class="card-text small mb-3">{{ part.description_ar|truncatechars:60 }}</p>
+                    {% endif %}
+
+                    <!-- Stock Levels -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="text-danger fw-bold fs-5">{{ part.available_quantity }}</div>
+                                <small class="text-muted">{% trans "متاح" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="fw-bold fs-5">{{ part.minimum_stock }}</div>
+                                <small class="text-muted">{% trans "الحد الأدنى" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="fw-bold fs-5">{{ part.total_quantity }}</div>
+                            <small class="text-muted">{% trans "الإجمالي" %}</small>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>{% trans "مستوى المخزون" %}</span>
+                            <span>{{ part.available_quantity|div:part.minimum_stock|mul:100|floatformat:0 }}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-{% if part.available_quantity == 0 %}danger{% elif part.available_quantity < part.minimum_stock %}warning{% else %}success{% endif %}"
+                                 style="width: {% widthratio part.available_quantity part.minimum_stock 100 %}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    {% if part.location %}
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        {{ part.location }}{% if part.shelf_number %} - {{ part.shelf_number }}{% endif %}
+                    </p>
+                    {% endif %}
+
+                    <!-- Urgency Level -->
+                    {% if part.available_quantity == 0 %}
+                    <div class="alert alert-danger py-2 mb-2">
+                        <i class="fas fa-ban me-1"></i>
+                        <small><strong>{% trans "نفذت الكمية!" %}</strong></small>
+                    </div>
+                    {% elif part.available_quantity < part.minimum_stock %}
+                    <div class="alert alert-warning py-2 mb-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <small><strong>{% trans "تحت الحد الأدنى" %}</strong></small>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex gap-1">
+                        <a href="/inventory/parts/{{ part.id }}/" class="btn btn-outline-primary btn-sm flex-fill">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/inventory/parts/{{ part.id }}/edit/" class="btn btn-warning btn-sm flex-fill">
+                            <i class="fas fa-edit"></i> {% trans "تعديل" %}
+                        </a>
+                        <button class="btn btn-success btn-sm flex-fill" onclick="restock({{ part.id }}, '{{ part.name_ar|escapejs }}')">
+                            <i class="fas fa-plus"></i> {% trans "تعبئة" %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        {% trans "ملخص إحصائي" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="border-end border-md-end-0 border-bottom border-md-bottom-0">
+                                <h4 class="text-danger mb-1">
+                                    {{ low_stock_parts|length|stringformat:"s"|length|add:low_stock_parts|length|stringformat:"s"|slice:":1" }}
+                                </h4>
+                                <small class="text-muted">{% trans "إجمالي القطع المنخفضة" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="border-end border-md-end-0 border-bottom border-md-bottom-0">
+                                <h4 class="text-danger mb-1">
+                                    {% with zero_stock=low_stock_parts|length %}
+                                        {% for part in low_stock_parts %}
+                                            {% if part.available_quantity == 0 %}{{ forloop.counter0 }}{% endif %}
+                                        {% endfor %}
+                                    {% endwith %}
+                                </h4>
+                                <small class="text-muted">{% trans "نفدت الكمية" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="border-end border-md-end-0">
+                                <h4 class="text-warning mb-1">{{ low_stock_parts|length }}</h4>
+                                <small class="text-muted">{% trans "تحت الحد الأدنى" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <h4 class="text-info mb-1">
+                                {% for cat in categories %}{{ forloop.counter }}{% endfor %}
+                            </h4>
+                            <small class="text-muted">{% trans "فئات متأثرة" %}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No Low Stock Items -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="icon-circle mx-auto mb-4" style="background: linear-gradient(135deg, #28a745, #20c997); width: 80px; height: 80px;">
+                        <i class="fas fa-check fa-2x"></i>
+                    </div>
+                    <h4 class="text-success mb-3">{% trans "ممتاز! لا توجد قطع منخفضة المخزون" %}</h4>
+                    <p class="text-muted mb-4">
+                        {% trans "جميع القطع في المخزون تحتوي على كميات كافية وفوق الحد الأدنى المطلوب." %}
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="/inventory/" class="btn btn-primary">
+                            <i class="fas fa-boxes me-2"></i>
+                            {% trans "عرض المخزون" %}
+                        </a>
+                        <a href="/inventory/parts/" class="btn btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>
+                            {% trans "قائمة القطع" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Restock Modal -->
+<div class="modal fade" id="restockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle text-success me-2"></i>
+                    {% trans "إعادة تعبئة المخزون" %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="restockForm">
+                    <div class="mb-3">
+                        <label for="restockQuantity" class="form-label">{% trans "الكمية المضافة" %}</label>
+                        <input type="number" class="form-control" id="restockQuantity" min="1" value="10" required>
+                        <small class="text-muted">{% trans "عدد القطع التي تريد إضافتها للمخزون" %}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="restockNotes" class="form-label">{% trans "ملاحظات" %}</label>
+                        <textarea class="form-control" id="restockNotes" rows="3"
+                                  placeholder="{% trans 'سبب إعادة التعبئة، رقم الفاتورة، إلخ...' %}"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% trans "إلغاء" %}
+                </button>
+                <button type="button" class="btn btn-success" onclick="submitRestock()">
+                    <i class="fas fa-plus me-1"></i>
+                    {% trans "إضافة للمخزون" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPartId = null;
+    let currentPartName = '';
+
+    function restock(partId, partName) {
+        currentPartId = partId;
+        currentPartName = partName;
+        document.querySelector('#restockModal .modal-title').innerHTML =
+            '<i class="fas fa-plus-circle text-success me-2"></i>{% trans "إعادة تعبئة المخزون" %}: ' + partName;
+        new bootstrap.Modal(document.getElementById('restockModal')).show();
+    }
+
+    function submitRestock() {
+        const quantity = document.getElementById('restockQuantity').value;
+        const notes = document.getElementById('restockNotes').value;
+
+        if (!quantity || quantity < 1) {
+            alert('{% trans "يرجى إدخال كمية صحيحة" %}');
+            return;
+        }
+
+        // In a real implementation, you would send this to your backend
+        // For now, we'll just show a success message
+        alert(`{% trans "تم إضافة" %} ${quantity} {% trans "قطعة إلى مخزون" %} ${currentPartName}`);
+
+        // Close modal and refresh page
+        bootstrap.Modal.getInstance(document.getElementById('restockModal')).hide();
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    }
+
+    // Auto-refresh every 2 minutes
+    setInterval(() => {
+        if (!document.querySelector('.modal.show')) {
+            location.reload();
+        }
+    }, 120000);
+
+    // Print functionality
+    function printReport() {
+        window.print();
+    }
+
+    // Export functionality (basic)
+    function exportReport() {
+        const data = [];
+        document.querySelectorAll('.card[data-part-id]').forEach(card => {
+            // Extract data for export
+            // This is a simplified example
+        });
+
+        // In a real app, you'd generate CSV/Excel
+        alert('{% trans "سيتم إضافة وظيفة التصدير قريباً" %}');
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Alt + P to print
+        if (e.altKey && e.key === 'p') {
+            e.preventDefault();
+            printReport();
+        }
+
+        // Alt + E to export
+        if (e.altKey && e.key === 'e') {
+            e.preventDefault();
+            exportReport();
+        }
+    });
+</script>
+{% endblock %}

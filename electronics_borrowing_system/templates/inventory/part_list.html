@@ -1,30 +1,191 @@
 {% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
 
-{% block title %}القطع المتاحة - {{ block.super }}{% endblock %}
+{% block title %}{% trans "قائمة القطع الإلكترونية" %}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h1 class="fw-bold mb-4">
-            <i class="fas fa-microchip me-2"></i>
-            القطع الإلكترونية المتاحة
-        </h1>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-microchip fa-3x text-muted mb-3"></i>
-                <h4 class="text-muted">لا توجد قطع متاحة حالياً</h4>
-                <p class="text-muted">سيتم إضافة القطع الإلكترونية قريباً</p>
-                <a href="{% url 'borrowing:dashboard' %}" class="btn btn-primary">
-                    <i class="fas fa-arrow-left me-2"></i>
-                    العودة للوحة التحكم
-                </a>
+<div class="inventory-parts-list">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-1">
+                                <i class="fas fa-list text-primary me-2"></i>
+                                {% trans "قائمة القطع الإلكترونية" %}
+                            </h1>
+                            <p class="text-muted mb-0">{% trans "إجمالي" %} {{ total_parts }} {% trans "قطعة" %}</p>
+                        </div>
+                        <div>
+                            <a href="/inventory/add/" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>
+                                {% trans "إضافة قطعة جديدة" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">{% trans "البحث" %}</label>
+                            <input type="text" class="form-control" name="search" value="{{ search }}"
+                                   placeholder="{% trans 'اسم القطعة أو رقمها...' %}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">{% trans "الفئة" %}</label>
+                            <select class="form-select" name="category">
+                                <option value="">{% trans "جميع الفئات" %}</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cat.name_ar }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{% trans "الحالة" %}</label>
+                            <select class="form-select" name="status">
+                                <option value="">{% trans "جميع الحالات" %}</option>
+                                <option value="available" {% if selected_status == 'available' %}selected{% endif %}>{% trans "متاح" %}</option>
+                                <option value="borrowed" {% if selected_status == 'borrowed' %}selected{% endif %}>{% trans "مُستعار" %}</option>
+                                <option value="maintenance" {% if selected_status == 'maintenance' %}selected{% endif %}>{% trans "تحت الصيانة" %}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i> {% trans "بحث" %}
+                                </button>
+                                <a href="/inventory/parts/" class="btn btn-outline-secondary">
+                                    <i class="fas fa-undo me-1"></i> {% trans "إعادة تعيين" %}
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parts List -->
+    <div class="row">
+        {% if parts %}
+            {% for part in parts %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h6 class="card-title mb-0">{{ part.name_ar }}</h6>
+                            <span class="badge bg-{% if part.status == 'available' %}success{% elif part.status == 'borrowed' %}warning{% else %}secondary{% endif %}">
+                                {% if part.status == 'available' %}{% trans "متاح" %}
+                                {% elif part.status == 'borrowed' %}{% trans "مُستعار" %}
+                                {% elif part.status == 'maintenance' %}{% trans "صيانة" %}
+                                {% else %}{{ part.status }}{% endif %}
+                            </span>
+                        </div>
+
+                        <p class="text-muted small mb-2">{{ part.part_number }}</p>
+
+                        {% if part.description_ar %}
+                        <p class="card-text small">{{ part.description_ar|truncatechars:80 }}</p>
+                        {% endif %}
+
+                        <div class="row text-center mb-3">
+                            <div class="col-4">
+                                <small class="text-muted d-block">{% trans "المتاح" %}</small>
+                                <strong class="text-{% if part.available_quantity > part.minimum_stock %}success{% else %}warning{% endif %}">
+                                    {{ part.available_quantity }}
+                                </strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">{% trans "الإجمالي" %}</small>
+                                <strong>{{ part.total_quantity }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">{% trans "الحد الأدنى" %}</small>
+                                <strong>{{ part.minimum_stock }}</strong>
+                            </div>
+                        </div>
+
+                        {% if part.location %}
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-map-marker-alt me-1"></i>
+                            {{ part.location }}{% if part.shelf_number %} - {{ part.shelf_number }}{% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex gap-2">
+                            <a href="/inventory/parts/{{ part.id }}/" class="btn btn-outline-primary btn-sm flex-fill">
+                                <i class="fas fa-eye me-1"></i> {% trans "عرض" %}
+                            </a>
+                            <a href="/inventory/parts/{{ part.id }}/edit/" class="btn btn-outline-secondary btn-sm flex-fill">
+                                <i class="fas fa-edit me-1"></i> {% trans "تعديل" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">{% trans "لا توجد قطع تطابق البحث" %}</h5>
+                        <p class="text-muted">{% trans "جرب تغيير معايير البحث أو إضافة قطع جديدة" %}</p>
+                        <a href="/inventory/add/" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            {% trans "إضافة قطعة جديدة" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination (if needed) -->
+    {% if parts.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if parts.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ parts.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">
+                            {% trans "السابق" %}
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">{{ parts.number }} من {{ parts.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if parts.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ parts.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}">
+                            {% trans "التالي" %}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
