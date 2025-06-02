@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}طلباتي - نظام الاستعارة{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold mb-2">
+                    <i class="fas fa-list me-2"></i>
+                    طلبات الاستعارة
+                </h1>
+                <p class="text-muted">عرض جميع طلبات الاستعارة الخاصة بك</p>
+            </div>
+            <div>
+                <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    طلب جديد
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h4>{{ total_requests }}</h4>
+                <p class="mb-0">إجمالي الطلبات</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h4>{{ pending_count }}</h4>
+                <p class="mb-0">قيد المراجعة</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h4>{{ approved_count }}</h4>
+                <p class="mb-0">موافق عليها</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h4>{{ total_requests|add:"-"|add:pending_count|add:"-"|add:approved_count }}</h4>
+                <p class="mb-0">مرفوضة</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requests List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    سجل الطلبات
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>الغرض</th>
+                                    <th>عدد القطع</th>
+                                    <th>تاريخ الإرجاع المتوقع</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in requests %}
+                                <tr>
+                                    <td>
+                                        <strong>#{{ request.id }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;" title="{{ request.purpose }}">
+                                            {{ request.purpose }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ request.total_parts }} قطعة</span>
+                                    </td>
+                                    <td>{{ request.expected_return_date }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>قيد المراجعة
+                                            </span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>موافق عليه
+                                            </span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times me-1"></i>مرفوض
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ request.created_at }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'borrowing:request_detail' request.id %}"
+                                               class="btn btn-outline-primary" title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if request.status == 'pending' %}
+                                            <button class="btn btn-outline-secondary"
+                                                    onclick="editRequest({{ request.id }})"
+                                                    title="تعديل" disabled>
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted">لا توجد طلبات استعارة</h4>
+                        <p class="text-muted mb-4">لم تقم بإنشاء أي طلبات استعارة حتى الآن</p>
+                        <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            إنشاء أول طلب استعارة
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Details Modal -->
+<div class="modal fade" id="requestModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل الطلب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="requestModalBody">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editRequest(requestId) {
+    // Placeholder for edit functionality
+    alert('تعديل الطلب رقم ' + requestId + ' - هذه الميزة قيد التطوير');
+}
+
+function viewRequestDetails(requestId) {
+    // Load request details in modal
+    fetch(`/borrowing/requests/${requestId}/`)
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('requestModalBody').innerHTML = data;
+            const modal = new bootstrap.Modal(document.getElementById('requestModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error loading request details:', error);
+            alert('حدث خطأ في تحميل تفاصيل الطلب');
+        });
+}
+</script>
+{% endblock %}

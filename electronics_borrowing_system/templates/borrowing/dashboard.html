@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم - نظام الاستعارة{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold mb-2">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    لوحة التحكم
+                </h1>
+                <p class="text-muted">مرحباً {{ user.get_full_name|default:user.username }}، هذا ملخص نشاطك في نظام الاستعارة</p>
+            </div>
+            <div>
+                <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    طلب استعارة جديد
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ active_borrows }}</h3>
+                        <p class="card-text">استعارات نشطة</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box-open fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ pending_requests }}</h3>
+                        <p class="card-text">طلبات معلقة</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ available_parts_count }}</h3>
+                        <p class="card-text">قطع متاحة</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-microchip fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ recent_requests|length }}</h3>
+                        <p class="card-text">طلبات حديثة</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-history fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Requests -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    الطلبات الحديثة
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>الغرض</th>
+                                    <th>عدد القطع</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in recent_requests %}
+                                <tr>
+                                    <td>#{{ request.id }}</td>
+                                    <td>{{ request.purpose|truncatechars:50 }}</td>
+                                    <td>{{ request.total_parts }}</td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">معلق</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">موافق عليه</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">مرفوض</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ request.created_at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">لا توجد طلبات حتى الآن</h5>
+                        <p class="text-muted">ابدأ بإنشاء أول طلب استعارة لك</p>
+                        <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            إنشاء طلب جديد
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    إجراءات سريعة
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        طلب استعارة جديد
+                    </a>
+                    <a href="{% url 'borrowing:request_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>
+                        عرض جميع طلباتي
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    نصائح مفيدة
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        حدد الغرض من الاستعارة بوضوح
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        اختر تاريخ إرجاع واقعي
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        احرص على إرجاع القطع في موعدها
+                    </li>
+                    <li>
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        تواصل مع الإدارة عند الحاجة
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

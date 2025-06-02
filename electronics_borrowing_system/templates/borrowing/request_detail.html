@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}تفاصيل الطلب #{{ request_data.id }} - نظام الاستعارة{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold mb-2">
+                    <i class="fas fa-file-alt me-2"></i>
+                    تفاصيل الطلب #{{ request_data.id }}
+                </h1>
+                <p class="text-muted">تفاصيل طلب الاستعارة المقدم بتاريخ {{ request_data.created_at }}</p>
+            </div>
+            <div>
+                <a href="{% url 'borrowing:request_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة للقائمة
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Request Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات الطلب
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>رقم الطلب:</strong></div>
+                    <div class="col-sm-9">#{{ request_data.id }}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>الغرض:</strong></div>
+                    <div class="col-sm-9">{{ request_data.purpose }}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>تاريخ الإرجاع المتوقع:</strong></div>
+                    <div class="col-sm-9">{{ request_data.expected_return_date }}</div>
+                </div>
+
+                {% if request_data.student_notes %}
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>ملاحظات إضافية:</strong></div>
+                    <div class="col-sm-9">{{ request_data.student_notes }}</div>
+                </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>تاريخ الإنشاء:</strong></div>
+                    <div class="col-sm-9">{{ request_data.created_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parts List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-microchip me-2"></i>
+                    القطع المطلوبة ({{ request_data.parts|length }} قطعة)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if request_data.parts %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>اسم القطعة</th>
+                                    <th>الكمية</th>
+                                    <th>الحالة المطلوبة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for part in request_data.parts %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ part.part_name }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ part.quantity }}</span>
+                                    </td>
+                                    <td>
+                                        {% if part.condition == 'excellent' %}
+                                            <span class="badge bg-success">ممتازة</span>
+                                        {% elif part.condition == 'good' %}
+                                            <span class="badge bg-info">جيدة</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">مقبولة</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">لا توجد قطع مضافة لهذا الطلب</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-flag me-2"></i>
+                    حالة الطلب
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    {% if request_data.status == 'pending' %}
+                        <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                        <h5 class="text-warning">قيد المراجعة</h5>
+                        <p class="text-muted">سيتم مراجعة طلبك خلال 24 ساعة</p>
+                    {% elif request_data.status == 'approved' %}
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="text-success">موافق عليه</h5>
+                        <p class="text-muted">تم الموافقة على طلبك. يمكنك استلام القطع من المختبر.</p>
+                        {% if request_data.approved_at %}
+                        <small class="text-muted">موافق عليه في: {{ request_data.approved_at }}</small>
+                        {% endif %}
+                    {% elif request_data.status == 'rejected' %}
+                        <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                        <h5 class="text-danger">مرفوض</h5>
+                        <p class="text-muted">تم رفض طلبك. تواصل مع الإدارة لمعرفة السبب.</p>
+                        {% if request_data.rejection_reason %}
+                        <div class="alert alert-danger mt-3">
+                            <strong>سبب الرفض:</strong><br>
+                            {{ request_data.rejection_reason }}
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    ملخص الطلب
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>إجمالي القطع:</span>
+                    <strong>{{ request_data.total_parts }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>الكمية الإجمالية:</span>
+                    <strong>
+                        {% widthratio request_data.parts|length 1 1 as total_quantity %}
+                        {% for part in request_data.parts %}
+                            {% if forloop.first %}{{ part.quantity }}{% else %} + {{ part.quantity }}{% endif %}
+                        {% endfor %}
+                    </strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>مدة الاستعارة:</span>
+                    <strong>
+                        حتى {{ request_data.expected_return_date }}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    إجراءات
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if request_data.status == 'pending' %}
+                        <button class="btn btn-outline-warning" disabled>
+                            <i class="fas fa-edit me-2"></i>
+                            تعديل الطلب (قريباً)
+                        </button>
+                        <button class="btn btn-outline-danger" disabled>
+                            <i class="fas fa-times me-2"></i>
+                            إلغاء الطلب (قريباً)
+                        </button>
+                    {% elif request_data.status == 'approved' %}
+                        <button class="btn btn-outline-info" disabled>
+                            <i class="fas fa-print me-2"></i>
+                            طباعة إيصال (قريباً)
+                        </button>
+                    {% endif %}
+
+                    <a href="{% url 'borrowing:create_request' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        طلب جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

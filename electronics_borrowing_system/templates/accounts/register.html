@@ -1,0 +1,212 @@
+<!-- ============================================================================ -->
+<!-- templates/accounts/register.html -->
+<!-- ============================================================================ -->
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "إنشاء حساب جديد" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="icon-circle">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h2 class="text-gradient fw-bold">{% trans "إنشاء حساب جديد" %}</h2>
+                    <p class="text-muted">{% trans "انضم إلى مجتمع مركز الإبداع" %}</p>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- Personal Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-user me-2 text-primary"></i>
+                                {% trans "الاسم الأول" %}
+                            </label>
+                            <input type="text"
+                                   class="form-control{% if form.first_name.errors %} is-invalid{% endif %}"
+                                   id="{{ form.first_name.id_for_label }}"
+                                   name="{{ form.first_name.name }}"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   placeholder="{% trans 'الاسم الأول' %}"
+                                   required>
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-user me-2 text-primary"></i>
+                                {% trans "اسم العائلة" %}
+                            </label>
+                            <input type="text"
+                                   class="form-control{% if form.last_name.errors %} is-invalid{% endif %}"
+                                   id="{{ form.last_name.id_for_label }}"
+                                   name="{{ form.last_name.name }}"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   placeholder="{% trans 'اسم العائلة' %}"
+                                   required>
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Username and Email -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.username.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-at me-2 text-primary"></i>
+                                {% trans "اسم المستخدم" %}
+                            </label>
+                            <input type="text"
+                                   class="form-control{% if form.username.errors %} is-invalid{% endif %}"
+                                   id="{{ form.username.id_for_label }}"
+                                   name="{{ form.username.name }}"
+                                   value="{{ form.username.value|default:'' }}"
+                                   placeholder="{% trans 'اسم المستخدم' %}"
+                                   required>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-envelope me-2 text-primary"></i>
+                                {% trans "البريد الإلكتروني" %}
+                            </label>
+                            <input type="email"
+                                   class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                                   id="{{ form.email.id_for_label }}"
+                                   name="{{ form.email.name }}"
+                                   value="{{ form.email.value|default:'' }}"
+                                   placeholder="{% trans 'example@university.edu' %}"
+                                   required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Student Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.student_id.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-id-card me-2 text-primary"></i>
+                                {% trans "الرقم الجامعي" %}
+                            </label>
+                            <input type="text"
+                                   class="form-control{% if form.student_id.errors %} is-invalid{% endif %}"
+                                   id="{{ form.student_id.id_for_label }}"
+                                   name="{{ form.student_id.name }}"
+                                   value="{{ form.student_id.value|default:'' }}"
+                                   placeholder="{% trans '20230001' %}"
+                                   required>
+                            {% if form.student_id.errors %}
+                                <div class="invalid-feedback">{{ form.student_id.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.department.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                                {% trans "التخصص" %}
+                            </label>
+                            <input type="text"
+                                   class="form-control{% if form.department.errors %} is-invalid{% endif %}"
+                                   id="{{ form.department.id_for_label }}"
+                                   name="{{ form.department.name }}"
+                                   value="{{ form.department.value|default:'' }}"
+                                   placeholder="{% trans 'هندسة الحاسوب' %}"
+                                   required>
+                            {% if form.department.errors %}
+                                <div class="invalid-feedback">{{ form.department.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="mb-3">
+                        <label for="{{ form.phone.id_for_label }}" class="form-label fw-bold">
+                            <i class="fas fa-phone me-2 text-primary"></i>
+                            {% trans "رقم الهاتف" %}
+                            <small class="text-muted">({% trans "اختياري" %})</small>
+                        </label>
+                        <input type="tel"
+                               class="form-control{% if form.phone.errors %} is-invalid{% endif %}"
+                               id="{{ form.phone.id_for_label }}"
+                               name="{{ form.phone.name }}"
+                               value="{{ form.phone.value|default:'' }}"
+                               placeholder="{% trans '+966XXXXXXXXX' %}">
+                        {% if form.phone.errors %}
+                            <div class="invalid-feedback">{{ form.phone.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.password1.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-lock me-2 text-primary"></i>
+                                {% trans "كلمة المرور" %}
+                            </label>
+                            <input type="password"
+                                   class="form-control{% if form.password1.errors %} is-invalid{% endif %}"
+                                   id="{{ form.password1.id_for_label }}"
+                                   name="{{ form.password1.name }}"
+                                   placeholder="{% trans 'كلمة مرور قوية' %}"
+                                   required>
+                            {% if form.password1.errors %}
+                                <div class="invalid-feedback">{{ form.password1.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.password2.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-lock me-2 text-primary"></i>
+                                {% trans "تأكيد كلمة المرور" %}
+                            </label>
+                            <input type="password"
+                                   class="form-control{% if form.password2.errors %} is-invalid{% endif %}"
+                                   id="{{ form.password2.id_for_label }}"
+                                   name="{{ form.password2.name }}"
+                                   placeholder="{% trans 'أعد كتابة كلمة المرور' %}"
+                                   required>
+                            {% if form.password2.errors %}
+                                <div class="invalid-feedback">{{ form.password2.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors.0 }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>
+                            {% trans "إنشاء الحساب" %}
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center">
+                    <p class="text-muted mb-0">
+                        {% trans "لديك حساب بالفعل؟" %}
+                        <a href="{% url 'accounts:login' %}" class="text-decoration-none fw-bold">
+                            {% trans "تسجيل الدخول" %}
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

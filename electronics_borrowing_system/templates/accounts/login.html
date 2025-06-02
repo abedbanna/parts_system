@@ -1,0 +1,88 @@
+<!-- ============================================================================ -->
+<!-- templates/accounts/login.html -->
+<!-- ============================================================================ -->
+{% extends 'base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "تسجيل الدخول" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="icon-circle">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </div>
+                    <h2 class="text-gradient fw-bold">{% trans "تسجيل الدخول" %}</h2>
+                    <p class="text-muted">{% trans "مرحباً بك في نظام استعارة القطع الإلكترونية" %}</p>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label fw-bold">
+                            <i class="fas fa-user me-2 text-primary"></i>
+                            {% trans "اسم المستخدم" %}
+                        </label>
+                        <input type="text"
+                               class="form-control{% if form.username.errors %} is-invalid{% endif %}"
+                               id="{{ form.username.id_for_label }}"
+                               name="{{ form.username.name }}"
+                               value="{{ form.username.value|default:'' }}"
+                               placeholder="{% trans 'أدخل اسم المستخدم' %}"
+                               required>
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.username.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.password.id_for_label }}" class="form-label fw-bold">
+                            <i class="fas fa-lock me-2 text-primary"></i>
+                            {% trans "كلمة المرور" %}
+                        </label>
+                        <input type="password"
+                               class="form-control{% if form.password.errors %} is-invalid{% endif %}"
+                               id="{{ form.password.id_for_label }}"
+                               name="{{ form.password.name }}"
+                               placeholder="{% trans 'أدخل كلمة المرور' %}"
+                               required>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.password.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors.0 }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            {% trans "دخول" %}
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center">
+                    <p class="text-muted mb-0">
+                        {% trans "ليس لديك حساب؟" %}
+                        <a href="{% url 'accounts:register' %}" class="text-decoration-none fw-bold">
+                            {% trans "إنشاء حساب جديد" %}
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
