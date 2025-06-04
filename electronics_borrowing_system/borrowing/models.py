@@ -1,535 +1,676 @@
-# borrowing/models.py (Enhanced version with improvements)
+# borrowing/views.py - Complete implementation with your inventory model
 
-from django.db import models
-from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import User
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
+from django.utils.translation import gettext as _
+from django.db import transaction
 from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.urls import reverse
-from datetime import date, timedelta
-import uuid
-
-
-class TimestampedModel(models.Model):
-    """Abstract base model with timestamp fields"""
-    created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
-
-    class Meta:
-        abstract = True
-
-
-class BorrowRequest(TimestampedModel):
-    """Student borrowing requests"""
-    STATUS_CHOICES = (
-        ('draft', _('Draft')),
-        ('submitted', _('Submitted')),
-        ('approved', _('Approved')),
-        ('rejected', _('Rejected')),
-        ('borrowed', _('Borrowed')),
-        ('returned', _('Returned')),
-        ('overdue', _('Overdue')),
-        ('damaged', _('Damaged')),
-        ('cancelled', _('Cancelled')),  # Added: Students can cancel their own requests
-    )
-
-    # Add UUID for security (prevents guessing request IDs)
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-
-    student = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name=_('Student'),
-        related_name='borrow_requests'
-    )
-    request_date = models.DateTimeField(_('Request Date'), auto_now_add=True)
-    purpose = models.TextField(_('Purpose of Use'))
-    expected_return_date = models.DateField(_('Expected Return Date'))
-
-    # Add urgency level
-    URGENCY_CHOICES = (
-        ('low', _('Low')),
-        ('normal', _('Normal')),
-        ('high', _('High')),
-        ('urgent', _('Urgent')),
-    )
-    urgency = models.CharField(
-        _('Urgency'),
-        max_length=10,
-        choices=URGENCY_CHOICES,
-        default='normal'
-    )
-
-    status = models.CharField(
-        _('Status'),
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='submitted'
-    )
-
-    # Approval workflow
-    approved_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='approved_requests',
-        verbose_name=_('Approved By')
-    )
-    approval_date = models.DateTimeField(_('Approval Date'), null=True, blank=True)
-    rejection_reason = models.TextField(_('Rejection Reason'), blank=True)
-
-    # Borrowing details
-    borrowed_date = models.DateTimeField(_('Borrowed Date'), null=True, blank=True)
-    actual_return_date = models.DateTimeField(_('Actual Return Date'), null=True, blank=True)
-
-    # Add due date reminder system
-    reminder_sent = models.BooleanField(_('Reminder Sent'), default=False)
-    overdue_notified = models.BooleanField(_('Overdue Notification Sent'), default=False)
-
-    # Notes
-    admin_notes = models.TextField(_('Admin Notes'), blank=True)
-    student_notes = models.TextField(_('Student Notes'), blank=True)
-
-    # Add attachment support
-    attachment = models.FileField(
-        _('Attachment'),
-        upload_to='borrow_requests/',
-        blank=True,
-        help_text=_('Optional: Circuit diagram, project description, etc.')
-    )
-
-    class Meta:
-        verbose_name = _('Borrow Request')
-        verbose_name_plural = _('Borrow Requests')
-        ordering = ['-request_date']
-        # Add database indexes for better performance
-        indexes = [
-            models.Index(fields=['status', 'request_date']),
-            models.Index(fields=['student', 'status']),
-            models.Index(fields=['expected_return_date']),
-        ]
-
-    def __str__(self):
-        student_name = self.student.get_full_name() or self.student.username
-        return f"#{self.id} - {student_name} - {self.request_date.strftime('%Y-%m-%d')}"
-
-    def clean(self):
-        """Enhanced validation"""
-        super().clean()
-
-        # Validate expected return date
-        if self.expected_return_date:
-            min_date = date.today() + timedelta(days=1)
-            max_date = date.today() + timedelta(days=90)  # Maximum 3 months
-
-            if self.expected_return_date < min_date:
-                raise ValidationError({
-                    'expected_return_date': _('Expected return date must be at least tomorrow.')
-                })
-
-            if self.expected_return_date > max_date:
-                raise ValidationError({
-                    'expected_return_date': _('Expected return date cannot be more than 3 months from now.')
-                })
-
-        # Validate status transitions
-        if self.pk:  # Only for existing instances
-            old_instance = BorrowRequest.objects.get(pk=self.pk)
-            if not self._is_valid_status_transition(old_instance.status, self.status):
-                raise ValidationError({
-                    'status': _('Invalid status transition from {} to {}.').format(
-                        old_instance.get_status_display(),
-                        self.get_status_display()
-                    )
-                })
-
-    def _is_valid_status_transition(self, from_status, to_status):
-        """Define valid status transitions"""
-        valid_transitions = {
-            'draft': ['submitted', 'cancelled'],
-            'submitted': ['approved', 'rejected', 'cancelled'],
-            'approved': ['borrowed', 'cancelled'],
-            'rejected': [],  # Final state
-            'borrowed': ['returned', 'overdue', 'damaged'],
-            'returned': [],  # Final state
-            'overdue': ['returned', 'damaged'],
-            'damaged': ['returned'],
-            'cancelled': [],  # Final state
-        }
-        return to_status in valid_transitions.get(from_status, [])
-
-    def get_absolute_url(self):
-        """Get URL for this request"""
-        return reverse('borrowing:request_detail', kwargs={'pk': self.pk})
-
-    @property
-    def is_overdue(self):
-        """Check if the request is overdue"""
-        if self.status == 'borrowed' and self.expected_return_date:
-            return timezone.now().date() > self.expected_return_date
-        return False
-
-    @property
-    def days_until_due(self):
-        """Get days until due (negative if overdue)"""
-        if self.status == 'borrowed' and self.expected_return_date:
-            return (self.expected_return_date - timezone.now().date()).days
-        return None
-
-    @property
-    def total_parts(self):
-        """Get total number of parts in this request"""
-        return self.records.aggregate(
-            total=models.Sum('quantity')
-        )['total'] or 0
-
-    @property
-    def can_be_cancelled(self):
-        """Check if request can be cancelled by student"""
-        return self.status in ['draft', 'submitted']
-
-    @property
-    def can_be_edited(self):
-        """Check if request can be edited by student"""
-        return self.status == 'draft'
-
-    def approve(self, approved_by):
-        """Approve the request"""
-        if self.status != 'submitted':
-            raise ValidationError(_('Only submitted requests can be approved.'))
-
-        self.status = 'approved'
-        self.approved_by = approved_by
-        self.approval_date = timezone.now()
-        self.save()
-
-        # Create history entry
-        BorrowRequestHistory.objects.create(
-            request=self,
-            action='approved',
-            performed_by=approved_by,
-            notes=f'Request approved by {approved_by.get_full_name() or approved_by.username}'
-        )
-
-    def reject(self, rejected_by, reason):
-        """Reject the request"""
-        if self.status != 'submitted':
-            raise ValidationError(_('Only submitted requests can be rejected.'))
-
-        self.status = 'rejected'
-        self.rejection_reason = reason
-        self.save()
-
-        # Create history entry
-        BorrowRequestHistory.objects.create(
-            request=self,
-            action='rejected',
-            performed_by=rejected_by,
-            notes=f'Request rejected: {reason}'
-        )
-
-    def mark_as_borrowed(self, borrowed_by):
-        """Mark request as borrowed"""
-        if self.status != 'approved':
-            raise ValidationError(_('Only approved requests can be marked as borrowed.'))
-
-        self.status = 'borrowed'
-        self.borrowed_date = timezone.now()
-        self.save()
-
-        # Create history entry
-        BorrowRequestHistory.objects.create(
-            request=self,
-            action='borrowed',
-            performed_by=borrowed_by,
-            notes=f'Items borrowed by student'
-        )
-
-    def mark_as_returned(self, returned_by, condition_notes=""):
-        """Mark request as returned"""
-        if self.status not in ['borrowed', 'overdue']:
-            raise ValidationError(_('Only borrowed/overdue requests can be marked as returned.'))
-
-        self.status = 'returned'
-        self.actual_return_date = timezone.now()
-        self.save()
-
-        # Create history entry
-        BorrowRequestHistory.objects.create(
-            request=self,
-            action='returned',
-            performed_by=returned_by,
-            notes=f'Items returned. Condition: {condition_notes}'
-        )
-
-    def cancel(self, cancelled_by, reason=""):
-        """Cancel the request"""
-        if not self.can_be_cancelled:
-            raise ValidationError(_('This request cannot be cancelled.'))
-
-        self.status = 'cancelled'
-        self.save()
-
-        # Create history entry
-        BorrowRequestHistory.objects.create(
-            request=self,
-            action='cancelled',
-            performed_by=cancelled_by,
-            notes=f'Request cancelled: {reason}'
-        )
-
-
-class BorrowRecord(TimestampedModel):
-    """Individual part borrowing records"""
-    CONDITION_CHOICES = [
-        ('excellent', _('Excellent')),
-        ('good', _('Good')),
-        ('fair', _('Fair')),
-        ('damaged', _('Damaged')),
-        ('missing', _('Missing')),  # Added: For lost items
-    ]
-
-    request = models.ForeignKey(
-        BorrowRequest,
-        on_delete=models.CASCADE,
-        related_name='records',
-        verbose_name=_('Borrow Request')
-    )
-
-    # Part information (stored as text to handle cases where parts might not exist in inventory)
-    part_name = models.CharField(_('Part Name'), max_length=200)
-    part_description = models.TextField(_('Part Description'), blank=True)
-    part_number = models.CharField(_('Part Number'), max_length=100, blank=True)  # Added
-    quantity = models.PositiveIntegerField(_('Quantity'), default=1)
-
-    # Add unit cost for tracking value
-    unit_cost = models.DecimalField(
-        _('Unit Cost'),
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text=_('Cost per unit for damage/loss tracking')
-    )
-
-    # Condition tracking
-    condition_borrowed = models.CharField(
-        _('Condition When Borrowed'),
-        max_length=20,
-        choices=CONDITION_CHOICES,
-        default='excellent'
-    )
-    condition_returned = models.CharField(
-        _('Condition When Returned'),
-        max_length=20,
-        choices=CONDITION_CHOICES,
-        blank=True
-    )
-
-    damage_description = models.TextField(_('Damage Description'), blank=True)
-
-    # Add replacement cost for damaged/missing items
-    replacement_cost = models.DecimalField(
-        _('Replacement Cost'),
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True
-    )
-
-    # Optional reference to inventory system
-    inventory_part = models.ForeignKey(
-        'inventory.ElectronicPart',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_('Inventory Part')
-    )
-
-    # Add serial numbers for tracking specific items
-    serial_numbers = models.JSONField(
-        _('Serial Numbers'),
-        default=list,
-        blank=True,
-        help_text=_('List of serial numbers for tracked items')
-    )
-
-    class Meta:
-        verbose_name = _('Borrow Record')
-        verbose_name_plural = _('Borrow Records')
-        # Add constraint to prevent duplicate parts in same request
-        unique_together = ['request', 'part_name', 'part_number']
-
-    def __str__(self):
-        return f"{self.part_name} x{self.quantity} - {self.request}"
-
-    @property
-    def is_damaged(self):
-        """Check if part was returned damaged"""
-        return self.condition_returned in ['damaged', 'missing']
-
-    @property
-    def total_value(self):
-        """Calculate total value of this record"""
-        if self.unit_cost:
-            return self.unit_cost * self.quantity
-        return 0
-
-    @property
-    def damage_cost(self):
-        """Calculate damage/replacement cost"""
-        if self.is_damaged and self.replacement_cost:
-            return self.replacement_cost
-        return 0
-
-    def clean(self):
-        """Enhanced validation"""
-        super().clean()
-
-        if self.quantity <= 0:
-            raise ValidationError({
-                'quantity': _('Quantity must be greater than 0.')
-            })
-
-        if self.unit_cost and self.unit_cost < 0:
-            raise ValidationError({
-                'unit_cost': _('Unit cost cannot be negative.')
-            })
-
-        if self.replacement_cost and self.replacement_cost < 0:
-            raise ValidationError({
-                'replacement_cost': _('Replacement cost cannot be negative.')
-            })
-
-
-class BorrowRequestHistory(TimestampedModel):
-    """Track all actions performed on borrow requests"""
-    ACTION_CHOICES = [
-        ('created', _('Created')),
-        ('submitted', _('Submitted')),
-        ('approved', _('Approved')),
-        ('rejected', _('Rejected')),
-        ('borrowed', _('Borrowed')),
-        ('returned', _('Returned')),
-        ('cancelled', _('Cancelled')),
-        ('reminder_sent', _('Reminder Sent')),
-        ('marked_overdue', _('Marked Overdue')),
-        ('note_added', _('Note Added')),
-    ]
-
-    request = models.ForeignKey(
-        BorrowRequest,
-        on_delete=models.CASCADE,
-        related_name='history'
-    )
-    action = models.CharField(_('Action'), max_length=20, choices=ACTION_CHOICES)
-    performed_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    notes = models.TextField(_('Notes'), blank=True)
-
-    class Meta:
-        verbose_name = _('Borrow Request History')
-        verbose_name_plural = _('Borrow Request Histories')
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.get_action_display()} - {self.request}"
-
-
-# Enhanced managers and querysets
-class BorrowRequestQuerySet(models.QuerySet):
-    def pending(self):
-        return self.filter(status='submitted')
-
-    def approved(self):
-        return self.filter(status='approved')
-
-    def active(self):
-        return self.filter(status='borrowed')
-
-    def overdue(self):
-        from datetime import date
-        return self.filter(
-            status='borrowed',
-            expected_return_date__lt=date.today()
-        )
-
-    def due_soon(self, days=3):
-        """Get requests due within specified days"""
-        from datetime import date, timedelta
-        due_date = date.today() + timedelta(days=days)
-        return self.filter(
-            status='borrowed',
-            expected_return_date__lte=due_date,
-            expected_return_date__gte=date.today()
-        )
-
-    def for_student(self, user):
-        return self.filter(student=user)
-
-    def by_urgency(self, urgency):
-        return self.filter(urgency=urgency)
-
-    def with_attachments(self):
-        return self.exclude(attachment='')
-
-
-class BorrowRequestManager(models.Manager):
-    def get_queryset(self):
-        return BorrowRequestQuerySet(self.model, using=self._db)
-
-    def pending(self):
-        return self.get_queryset().pending()
-
-    def approved(self):
-        return self.get_queryset().approved()
-
-    def active(self):
-        return self.get_queryset().active()
-
-    def overdue(self):
-        return self.get_queryset().overdue()
-
-    def due_soon(self, days=3):
-        return self.get_queryset().due_soon(days)
-
-
-# Add the enhanced manager to the model
-BorrowRequest.add_to_class('objects', BorrowRequestManager())
-
-# Enhanced signal handlers
-from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
-
-
-@receiver(pre_save, sender=BorrowRequest)
-def create_history_on_status_change(sender, instance, **kwargs):
-    """Create history entry when status changes"""
-    if instance.pk:
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.db.models import Q, Count, Sum
+from datetime import datetime, date, timedelta
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Temporary storage for compatibility
+TEMP_REQUESTS_STORAGE = []
+
+# Check if models are available at module level
+try:
+    from .models import BorrowRequest, BorrowRecord
+
+    MODELS_AVAILABLE = True
+    print("✅ Borrowing models loaded successfully")
+except ImportError:
+    MODELS_AVAILABLE = False
+    print("⚠️ Borrowing models not available, using temp storage")
+
+# Import your actual inventory models
+try:
+    from inventory.models import ElectronicPart, Category, InventoryTransaction
+
+    INVENTORY_AVAILABLE = True
+    print("✅ Inventory models loaded successfully")
+except ImportError:
+    INVENTORY_AVAILABLE = False
+    print("⚠️ Inventory models not available")
+
+
+def get_available_parts():
+    """Get available parts from your inventory system"""
+    if not INVENTORY_AVAILABLE:
+        return []
+
+    try:
+        # Get parts that are available for borrowing using your model's method
+        available_parts = ElectronicPart.objects.filter(
+            is_active=True
+        ).select_related('category').order_by('category__name_ar', 'name_ar')
+
+        # Filter only parts that are actually available for borrowing
+        borrowable_parts = [part for part in available_parts if part.is_available_for_borrowing]
+
+        return borrowable_parts
+    except Exception as e:
+        print(f"Error fetching inventory parts: {e}")
+        return []
+
+
+def get_popular_parts():
+    """Get most popular/frequently borrowed parts"""
+    if not INVENTORY_AVAILABLE:
+        return []
+
+    try:
+        # Get parts with highest available quantity (you can modify this logic)
+        popular_parts = ElectronicPart.objects.filter(
+            is_active=True,
+            status='available',
+            available_quantity__gt=0
+        ).order_by('-available_quantity')[:10]
+
+        return popular_parts
+    except Exception as e:
+        print(f"Error fetching popular parts: {e}")
+        return []
+
+
+def get_categories_with_parts():
+    """Get categories with their available parts"""
+    if not INVENTORY_AVAILABLE:
+        return {}
+
+    try:
+        categories = {}
+
+        # Get all active categories with parts
+        active_categories = Category.objects.filter(
+            is_active=True,
+            parts__is_active=True,
+            parts__status='available',
+            parts__available_quantity__gt=0
+        ).distinct().prefetch_related('parts')
+
+        for category in active_categories:
+            # Get available parts for this category
+            available_parts = [
+                part for part in category.parts.all()
+                if part.is_available_for_borrowing
+            ]
+
+            if available_parts:
+                categories[category.name] = available_parts
+
+        return categories
+    except Exception as e:
+        print(f"Error fetching categories: {e}")
+        return {}
+
+
+def convert_request_to_dict(request_obj):
+    """Convert model instance to dict format for template compatibility"""
+    if not request_obj:
+        return {}
+
+    return {
+        'id': request_obj.id,
+        'user_id': request_obj.student.id,
+        'user_name': request_obj.student.get_full_name() or request_obj.student.username,
+        'purpose': request_obj.purpose,
+        'expected_return_date': request_obj.expected_return_date.strftime(
+            '%Y-%m-%d') if request_obj.expected_return_date else '',
+        'student_notes': getattr(request_obj, 'student_notes', ''),
+        'status': request_obj.status,
+        'created_at': request_obj.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(request_obj,
+                                                                                   'created_at') else request_obj.request_date.strftime(
+            '%Y-%m-%d %H:%M'),
+        'total_parts': request_obj.records.count() if hasattr(request_obj, 'records') else getattr(request_obj,
+                                                                                                   'total_parts', 0)
+    }
+
+
+@login_required
+def dashboard(request):
+    """Student dashboard with inventory integration"""
+
+    # Check if user is admin and redirect
+    if request.user.is_staff:
+        print(f"Admin user {request.user.username} accessing dashboard - redirecting to admin")
+        return redirect('/borrowing/admin/')
+
+    # Try database first, fall back to temp storage
+    user_requests_db = None
+    if MODELS_AVAILABLE:
         try:
-            old_instance = BorrowRequest.objects.get(pk=instance.pk)
-            if old_instance.status != instance.status:
-                # History will be created by the action methods
-                pass
-        except BorrowRequest.DoesNotExist:
-            pass
+            user_requests_db = BorrowRequest.objects.filter(student=request.user)
+        except Exception as e:
+            print(f"Database query error: {e}")
+
+    if user_requests_db is not None:
+        # Database version
+        try:
+            context = {
+                'active_borrows': user_requests_db.filter(status__in=['approved', 'borrowed']).count(),
+                'pending_requests': user_requests_db.filter(status__in=['submitted', 'pending']).count(),
+                'recent_requests': [convert_request_to_dict(req) for req in
+                                    user_requests_db.order_by('-created_at')[:5]],
+                'available_parts_count': len(get_available_parts()) if INVENTORY_AVAILABLE else 50,
+                'total_requests': user_requests_db.count(),
+            }
+        except Exception as e:
+            print(f"Database query error: {e}")
+            user_requests_db = None
+
+    if user_requests_db is None:
+        # Temp storage version
+        user_requests = [req for req in TEMP_REQUESTS_STORAGE if req.get('user_id') == request.user.id]
+        context = {
+            'active_borrows': len([req for req in user_requests if req.get('status') == 'approved']),
+            'pending_requests': len([req for req in user_requests if req.get('status') == 'pending']),
+            'recent_requests': user_requests[-5:],
+            'available_parts_count': len(get_available_parts()) if INVENTORY_AVAILABLE else 50,
+            'total_requests': len(user_requests),
+        }
+
+    return render(request, 'borrowing/dashboard.html', context)
 
 
-@receiver(post_save, sender=BorrowRecord)
-def update_request_status_on_record_save(sender, instance, created, **kwargs):
-    """Update request status when records are added"""
-    if created and instance.request.status == 'draft':
-        instance.request.status = 'submitted'
-        instance.request.save()
+@login_required
+def create_request(request):
+    """Enhanced create request function with your inventory integration"""
+
+    # Redirect admin users to admin dashboard
+    if request.user.is_staff:
+        messages.info(request, 'المديرين لا يحتاجون لإنشاء طلبات استعارة')
+        return redirect('/borrowing/admin/')
+
+    if request.method == 'POST':
+        # Debug: Log all POST data
+        print("=== POST DATA RECEIVED ===")
+        for key, value in request.POST.items():
+            print(f"{key}: {value}")
+
+        purpose = request.POST.get('purpose', '').strip()
+        expected_return_date = request.POST.get('expected_return_date', '').strip()
+        student_notes = request.POST.get('student_notes', '').strip()
+
+        if not purpose or not expected_return_date:
+            messages.error(request, _('الرجاء ملء جميع الحقول المطلوبة.'))
+            return render(request, 'borrowing/create_request.html', get_form_context())
+
+        # Collect parts data from form
+        parts_data = []
+        part_index = 0
+
+        while f'part_name_{part_index}' in request.POST:
+            part_name = request.POST.get(f'part_name_{part_index}', '').strip()
+            if part_name:  # Only process non-empty parts
+                quantity = int(request.POST.get(f'quantity_{part_index}', 1))
+                condition = request.POST.get(f'condition_{part_index}', 'excellent')
+
+                # Try to find the part in your inventory
+                inventory_part = None
+                if INVENTORY_AVAILABLE:
+                    try:
+                        # Search by name (both Arabic and English) or part number
+                        inventory_part = ElectronicPart.objects.filter(
+                            Q(name_ar__icontains=part_name) |
+                            Q(name_en__icontains=part_name) |
+                            Q(part_number__icontains=part_name),
+                            is_active=True
+                        ).first()
+
+                        # Check availability using your model's method
+                        if inventory_part and not inventory_part.can_borrow(quantity):
+                            messages.error(request,
+                                           f'الكمية المطلوبة من {part_name} ({quantity}) أكثر من المتوفر ({inventory_part.available_quantity})')
+                            return render(request, 'borrowing/create_request.html', get_form_context())
+                    except Exception as e:
+                        print(f"Error checking inventory for {part_name}: {e}")
+
+                parts_data.append({
+                    'name': part_name,
+                    'quantity': quantity,
+                    'condition': condition,
+                    'inventory_part': inventory_part
+                })
+
+            part_index += 1
+
+        if not parts_data:
+            messages.error(request, _('يرجى إضافة قطعة واحدة على الأقل.'))
+            return render(request, 'borrowing/create_request.html', get_form_context())
+
+        # Try database first
+        if MODELS_AVAILABLE:
+            try:
+                with transaction.atomic():
+                    # Create the request
+                    borrow_request = BorrowRequest.objects.create(
+                        student=request.user,
+                        purpose=purpose,
+                        expected_return_date=expected_return_date,
+                        student_notes=student_notes,
+                        status='submitted'
+                    )
+
+                    # Create records for each part
+                    for part_data in parts_data:
+                        borrow_record = BorrowRecord.objects.create(
+                            request=borrow_request,
+                            part_name=part_data['name'],
+                            quantity=part_data['quantity'],
+                            condition_borrowed=part_data['condition']
+                        )
+
+                        # Link to your inventory if available
+                        if part_data['inventory_part']:
+                            inventory_part = part_data['inventory_part']
+                            borrow_record.inventory_part = inventory_part
+                            borrow_record.part_description = inventory_part.description
+                            borrow_record.part_number = inventory_part.part_number
+                            borrow_record.save()
+
+                    messages.success(request, _(f'تم إنشاء طلب الاستعارة بنجاح! رقم الطلب: {borrow_request.id}'))
+                    return redirect('/borrowing/')
+
+            except Exception as e:
+                print(f"Database error during request creation: {e}")
+                messages.error(request, _('حدث خطأ في قاعدة البيانات. جاري المحاولة بالطريقة البديلة...'))
+
+        # Fall back to temp storage
+        request_data = {
+            'id': len(TEMP_REQUESTS_STORAGE) + 1,
+            'user_id': request.user.id,
+            'user_name': request.user.get_full_name() or request.user.username,
+            'purpose': purpose,
+            'expected_return_date': expected_return_date,
+            'student_notes': student_notes,
+            'parts': [{'name': p['name'], 'quantity': p['quantity']} for p in parts_data],
+            'status': 'pending',
+            'created_at': timezone.now().strftime('%Y-%m-%d %H:%M'),
+            'total_parts': len(parts_data)
+        }
+
+        TEMP_REQUESTS_STORAGE.append(request_data)
+        messages.success(request, _(f'تم إنشاء طلب الاستعارة بنجاح! رقم الطلب: {request_data["id"]}'))
+        return redirect('/borrowing/')
+
+    # GET request - show form with your inventory data
+    return render(request, 'borrowing/create_request.html', get_form_context())
 
 
-@receiver(post_save, sender=BorrowRequest)
-def create_initial_history(sender, instance, created, **kwargs):
-    """Create initial history entry for new requests"""
-    if created:
-        BorrowRequestHistory.objects.create(
-            request=instance,
-            action='created',
-            performed_by=instance.student,
-            notes='Request created'
-        )
+def get_form_context():
+    """Get context data for the form using your inventory"""
+    available_parts = get_available_parts()
+    popular_parts = get_popular_parts()
+    categories = get_categories_with_parts()
+
+    # Convert to format expected by template
+    available_parts_list = []
+    for part in available_parts:
+        available_parts_list.append({
+            'id': part.id,
+            'name': part.name,  # Uses your model's property that returns name based on language
+            'name_ar': part.name_ar,
+            'name_en': part.name_en,
+            'category': part.category.name if part.category else 'Unknown',
+            'quantity': part.available_quantity,
+            'total_quantity': part.total_quantity,
+            'description': part.description,  # Uses your model's property
+            'part_number': part.part_number,
+            'location': f"{part.location} {part.shelf_number}".strip(),
+            'condition': part.get_condition_display(),
+            'manufacturer': part.manufacturer,
+            'model': part.model,
+            'specifications': part.specifications,
+            'is_low_stock': part.is_low_stock,
+        })
+
+    # Convert popular parts
+    popular_parts_list = []
+    for part in popular_parts:
+        popular_parts_list.append({
+            'id': part.id,
+            'name': part.name,
+            'category': part.category.name if part.category else 'Unknown',
+            'quantity': part.available_quantity,
+            'description': part.description,
+        })
+
+    # Convert categories
+    categories_dict = {}
+    for category_name, parts in categories.items():
+        categories_dict[category_name] = []
+        for part in parts:
+            categories_dict[category_name].append({
+                'id': part.id,
+                'name': part.name,
+                'quantity': part.available_quantity,
+                'description': part.description,
+                'part_number': part.part_number,
+                'location': f"{part.location} {part.shelf_number}".strip(),
+            })
+
+    return {
+        'form': {},
+        'available_parts': available_parts_list,
+        'categories': categories_dict,
+        'popular_parts': popular_parts_list,
+        'inventory_available': INVENTORY_AVAILABLE,
+        'total_parts_count': len(available_parts_list)
+    }
+
+
+@login_required
+def parts_autocomplete(request):
+    """AJAX endpoint for parts autocomplete using your inventory"""
+    query = request.GET.get('q', '').strip()
+
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    results = []
+
+    if INVENTORY_AVAILABLE:
+        try:
+            # Search in your inventory using both Arabic and English names
+            parts = ElectronicPart.objects.filter(
+                Q(name_ar__icontains=query) |
+                Q(name_en__icontains=query) |
+                Q(part_number__icontains=query) |
+                Q(description_ar__icontains=query) |
+                Q(description_en__icontains=query),
+                is_active=True
+            ).select_related('category')[:15]  # Limit to 15 results
+
+            for part in parts:
+                # Only include parts that are available for borrowing
+                if part.is_available_for_borrowing:
+                    results.append({
+                        'id': part.id,
+                        'name': part.name,
+                        'name_ar': part.name_ar,
+                        'name_en': part.name_en,
+                        'part_number': part.part_number,
+                        'description': part.description,
+                        'quantity': part.available_quantity,
+                        'total_quantity': part.total_quantity,
+                        'category': part.category.name if part.category else 'Unknown',
+                        'location': f"{part.location} {part.shelf_number}".strip(),
+                        'condition': part.get_condition_display(),
+                        'manufacturer': part.manufacturer,
+                        'model': part.model,
+                        'is_low_stock': part.is_low_stock,
+                    })
+        except Exception as e:
+            print(f"Error in parts autocomplete: {e}")
+
+    return JsonResponse({'results': results})
+
+
+@login_required
+def get_part_details(request, part_id):
+    """Get detailed information about a specific part from your inventory"""
+    if not INVENTORY_AVAILABLE:
+        return JsonResponse({
+            'error': 'Inventory system not available'
+        }, status=503)
+
+    try:
+        part = get_object_or_404(ElectronicPart, id=part_id, is_active=True)
+
+        data = {
+            'id': part.id,
+            'name': part.name,
+            'name_ar': part.name_ar,
+            'name_en': part.name_en,
+            'part_number': part.part_number,
+            'description': part.description,
+            'description_ar': part.description_ar,
+            'description_en': part.description_en,
+            'quantity': part.available_quantity,
+            'total_quantity': part.total_quantity,
+            'minimum_stock': part.minimum_stock,
+            'category': {
+                'id': part.category.id,
+                'name': part.category.name,
+                'name_ar': part.category.name_ar,
+                'name_en': part.category.name_en,
+            } if part.category else None,
+            'location': part.location,
+            'shelf_number': part.shelf_number,
+            'condition': part.condition,
+            'condition_display': part.get_condition_display(),
+            'status': part.status,
+            'status_display': part.get_status_display(),
+            'manufacturer': part.manufacturer,
+            'model': part.model,
+            'specifications': part.specifications,
+            'purchase_date': part.purchase_date.strftime('%Y-%m-%d') if part.purchase_date else None,
+            'purchase_price': str(part.purchase_price) if part.purchase_price else None,
+            'supplier': part.supplier,
+            'image_url': part.image.url if part.image else None,
+            'is_low_stock': part.is_low_stock,
+            'is_available_for_borrowing': part.is_available_for_borrowing,
+            'notes': part.notes,
+        }
+
+        return JsonResponse(data)
+    except Exception as e:
+        print(f"Error getting part details: {e}")
+        return JsonResponse({
+            'error': 'Part not found or error occurred'
+        }, status=404)
+
+
+@login_required
+def request_list(request):
+    """Compatible request list function"""
+
+    # Redirect admin users to admin dashboard
+    if request.user.is_staff:
+        return redirect('/borrowing/admin/')
+
+    # Try database first
+    user_requests_db = None
+    if MODELS_AVAILABLE:
+        try:
+            user_requests_db = BorrowRequest.objects.filter(student=request.user).order_by('-created_at')
+        except Exception as e:
+            print(f"Database query error: {e}")
+
+    if user_requests_db is not None:
+        try:
+            requests_list = [convert_request_to_dict(req) for req in user_requests_db]
+        except Exception as e:
+            print(f"Database query error: {e}")
+            user_requests_db = None
+
+    if user_requests_db is None:
+        # Fall back to temp storage
+        requests_list = [req for req in TEMP_REQUESTS_STORAGE if req.get('user_id') == request.user.id]
+
+    # Sort by creation date (newest first)
+    requests_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+    context = {
+        'requests': requests_list,
+        'total_requests': len(requests_list),
+        'pending_count': len([req for req in requests_list if req.get('status') in ['pending', 'submitted']]),
+        'approved_count': len([req for req in requests_list if req.get('status') == 'approved']),
+    }
+    return render(request, 'borrowing/request_list.html', context)
+
+
+@login_required
+def request_detail(request, pk):
+    """Compatible request detail function"""
+
+    request_data = None
+
+    # Try database first
+    if MODELS_AVAILABLE:
+        try:
+            if request.user.is_staff:
+                borrow_request = get_object_or_404(BorrowRequest, pk=pk)
+            else:
+                borrow_request = get_object_or_404(BorrowRequest, pk=pk, student=request.user)
+
+            request_data = convert_request_to_dict(borrow_request)
+        except Exception as e:
+            print(f"Database error in request_detail: {e}")
+            request_data = None
+
+    # Fall back to temp storage if database failed
+    if request_data is None:
+        for req in TEMP_REQUESTS_STORAGE:
+            if req.get('id') == int(pk):
+                if request.user.is_staff or req.get('user_id') == request.user.id:
+                    request_data = req
+                    break
+
+    if not request_data:
+        messages.error(request, _('Request not found.'))
+        if request.user.is_staff:
+            return redirect('/borrowing/admin/')
+        else:
+            return redirect('/borrowing/')
+
+    context = {
+        'request_data': request_data,
+    }
+    return render(request, 'borrowing/request_detail.html', context)
+
+
+@staff_member_required
+def admin_dashboard(request):
+    """FIXED: Compatible admin dashboard with no scope errors"""
+
+    print(f"Admin dashboard accessed by: {request.user.username} (staff: {request.user.is_staff})")
+
+    # Try database first
+    database_success = False
+    if MODELS_AVAILABLE:
+        try:
+            all_requests_qs = BorrowRequest.objects.all().order_by('-created_at')
+
+            # Filter requests by status using standard QuerySet methods
+            pending_requests = all_requests_qs.filter(status__in=['submitted', 'pending'])
+            active_borrows = all_requests_qs.filter(status__in=['approved', 'borrowed'])
+
+            # Calculate overdue requests
+            today = date.today()
+            overdue_requests = all_requests_qs.filter(
+                status__in=['approved', 'borrowed'],
+                expected_return_date__lt=today
+            )
+
+            # Convert to format expected by template
+            context = {
+                'pending_requests': [convert_request_to_dict(req) for req in pending_requests[:10]],
+                'active_borrows': [convert_request_to_dict(req) for req in active_borrows[:10]],
+                'overdue_requests': [convert_request_to_dict(req) for req in overdue_requests[:10]],
+                'total_pending': pending_requests.count(),
+                'total_active': active_borrows.count(),
+                'total_overdue': overdue_requests.count(),
+                'all_requests': [convert_request_to_dict(req) for req in all_requests_qs[:10]],
+            }
+
+            database_success = True
+            print(
+                f"✅ Database queries successful: {context['total_pending']} pending, {context['total_active']} active")
+
+        except Exception as e:
+            print(f"❌ Database error in admin_dashboard: {e}")
+            database_success = False
+
+    # Fall back to temp storage if database failed or not available
+    if not database_success:
+        print("📝 Using temporary storage fallback")
+
+        pending_requests = [req for req in TEMP_REQUESTS_STORAGE if req.get('status') in ['pending', 'submitted']]
+        active_borrows = [req for req in TEMP_REQUESTS_STORAGE if req.get('status') == 'approved']
+
+        # Mock overdue logic for temp storage
+        overdue_cutoff = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M')
+        overdue_requests = [req for req in active_borrows if req.get('created_at', '9999-12-31 23:59') < overdue_cutoff]
+
+        context = {
+            'pending_requests': pending_requests[:10],
+            'active_borrows': active_borrows[:10],
+            'overdue_requests': overdue_requests[:10],
+            'total_pending': len(pending_requests),
+            'total_active': len(active_borrows),
+            'total_overdue': len(overdue_requests),
+            'all_requests': TEMP_REQUESTS_STORAGE[-10:],
+        }
+
+    print(
+        f"📊 Final context: {context['total_pending']} pending, {context['total_active']} active, {context['total_overdue']} overdue")
+    return render(request, 'borrowing/admin_dashboard.html', context)
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def approve_request(request, pk):
+    """Enhanced approve request function with inventory integration"""
+
+    # Try database first
+    if MODELS_AVAILABLE:
+        try:
+            with transaction.atomic():
+                borrow_request = get_object_or_404(BorrowRequest, pk=pk)
+
+                if borrow_request.status not in ['submitted', 'pending']:
+                    messages.warning(request, _('لقد تم معالجة هذا الطلب مسبقاً.'))
+                    return redirect('/borrowing/admin/')
+
+                # Check inventory availability and update quantities
+                if INVENTORY_AVAILABLE:
+                    for record in borrow_request.records.all():
+                        if record.inventory_part:
+                            inventory_part = record.inventory_part
+
+                            # Check if we can still borrow this quantity
+                            if not inventory_part.can_borrow(record.quantity):
+                                messages.error(request,
+                                               f'عذراً، الكمية المطلوبة من {record.part_name} غير متوفرة حالياً')
+                                return redirect('/borrowing/admin/')
+
+                            # Actually borrow the parts (updates inventory)
+                            success = inventory_part.borrow(record.quantity)
+                            if not success:
+                                messages.error(request,
+                                               f'فشل في حجز {record.part_name} من المخزون')
+                                return redirect('/borrowing/admin/')
+
+                            # Create inventory transaction record
+                            InventoryTransaction.objects.create(
+                                part=inventory_part,
+                                transaction_type='borrow',
+                                quantity=-record.quantity,  # Negative because it's borrowed
+                                previous_quantity=inventory_part.available_quantity + record.quantity,
+                                new_quantity=inventory_part.available_quantity,
+                                performed_by=request.user,
+                                reason=f'Approved borrow request #{borrow_request.id}',
+                                reference_id=str(borrow_request.id)
+                            )
+
+                # Approve the request
+                borrow_request.status = 'approved'
+                borrow_request.approved_by = request.user
+                borrow_request.approval_date = timezone.now()
+                borrow_request.save()
+
+                messages.success(request, _(f'تم الموافقة على الطلب #{pk} بنجاح! تم تحديث المخزون.'))
+                logger.info(f"Request {pk} approved by {request.user.username}")
+                return redirect('/borrowing/admin/')
+
+        except Exception as e:
+            print(f"Database error during approval: {e}")

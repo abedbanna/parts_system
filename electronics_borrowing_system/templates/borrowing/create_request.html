@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
 
 {% block title %}طلب استعارة جديد - {{ block.super }}{% endblock %}
 
@@ -13,11 +15,12 @@
     }
 
     .form-container {
-        background: white;
+        background: rgba(255, 255, 255, 0.95);
         border-radius: var(--border-radius);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         padding: 2rem;
         margin-bottom: 2rem;
+        backdrop-filter: blur(10px);
     }
 
     .step-indicator {
@@ -111,27 +114,31 @@
         border-radius: 8px;
         padding: 0.75rem;
         transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.9);
     }
 
     .form-control:focus, .form-select:focus {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.1);
+        background: rgba(255, 255, 255, 1);
     }
 
     .part-item {
-        background: #f8f9fa;
+        background: rgba(248, 249, 250, 0.9);
         border: 2px solid #e9ecef;
         border-radius: var(--border-radius);
         padding: 1.5rem;
         margin-bottom: 1rem;
         position: relative;
         transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
     }
 
     .part-item:hover {
         border-color: var(--primary-color);
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.95);
     }
 
     .part-header {
@@ -212,14 +219,14 @@
     }
 
     .btn-prev:hover {
-        background: #f8f9fa;
+        background: rgba(248, 249, 250, 0.9);
         border-color: #adb5bd;
         color: #495057;
     }
 
     .progress-bar-custom {
         height: 6px;
-        background: #e9ecef;
+        background: rgba(233, 236, 239, 0.8);
         border-radius: 3px;
         overflow: hidden;
         margin-bottom: 2rem;
@@ -232,11 +239,12 @@
     }
 
     .sidebar-card {
-        background: white;
+        background: rgba(255, 255, 255, 0.95);
         border-radius: var(--border-radius);
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         margin-bottom: 1.5rem;
         overflow: hidden;
+        backdrop-filter: blur(10px);
     }
 
     .sidebar-card .card-header {
@@ -256,24 +264,179 @@
         font-weight: 600;
     }
 
+    /* Enhanced Part Selection Styles - Simplified for Dropdowns */
+    .part-info {
+        margin-top: 0.5rem;
+    }
+
+    .part-info small {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
     .popular-part-item {
-        background: #f8f9fa;
+        background: rgba(248, 249, 250, 0.9);
         border-radius: 8px;
         padding: 0.8rem;
         margin-bottom: 0.8rem;
         cursor: pointer;
         transition: all 0.3s ease;
         border: 1px solid transparent;
+        position: relative;
     }
 
     .popular-part-item:hover {
-        background: #e9ecef;
+        background: rgba(233, 236, 239, 0.9);
         border-color: var(--primary-color);
         transform: scale(1.02);
     }
 
     .popular-part-item:last-child {
         margin-bottom: 0;
+    }
+
+    .popular-part-quantity {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        background: var(--success-color);
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+    }
+
+    .category-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .category-header {
+        background: rgba(248, 249, 250, 0.9);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.8rem;
+        font-weight: 600;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .category-header:hover {
+        background: rgba(233, 236, 239, 0.9);
+    }
+
+    .category-header.hidden {
+        display: none !important;
+    }
+
+    .category-parts {
+        padding-right: 1rem;
+        max-height: 200px;
+        overflow-y: auto;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .category-parts.collapsed {
+        display: none;
+    }
+
+    .part-search-container {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .part-search-input {
+        padding-right: 3rem;
+        padding-left: 3rem;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+    }
+
+    /* Enhanced Search Styles */
+    .search-stats {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        background: rgba(227, 242, 253, 0.9);
+        border-radius: 6px;
+        border-left: 3px solid var(--primary-color);
+        backdrop-filter: blur(5px);
+    }
+
+    .clear-search {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        display: none;
+        padding: 0.25rem;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .clear-search:hover {
+        color: var(--danger-color);
+        background: rgba(220, 53, 69, 0.1);
+    }
+
+    .highlight {
+        background-color: #ffeb3b;
+        color: #333;
+        font-weight: bold;
+        padding: 0;
+        border-radius: 2px;
+    }
+
+    .no-results {
+        background: rgba(248, 249, 250, 0.95);
+        border-radius: 8px;
+        margin: 1rem 0;
+        border: 1px dashed #dee2e6;
+        backdrop-filter: blur(5px);
+    }
+
+    .part-item.hidden {
+        display: none !important;
+    }
+
+    .inventory-status {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 600;
+    }
+
+    .inventory-available {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .inventory-low {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .inventory-unavailable {
+        background: #f8d7da;
+        color: #721c24;
     }
 
     .quick-fill-btn {
@@ -293,10 +456,11 @@
     }
 
     .review-section {
-        background: #f8f9fa;
+        background: rgba(248, 249, 250, 0.9);
         border-radius: 8px;
         padding: 1.5rem;
         margin-top: 2rem;
+        backdrop-filter: blur(5px);
     }
 
     .review-item {
@@ -333,11 +497,48 @@
     }
 
     .quick-fill-section {
-        background: #e8f5e8;
+        background: rgba(232, 245, 232, 0.9);
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 1.5rem;
         border: 1px solid #c3e6cb;
+        backdrop-filter: blur(5px);
+    }
+
+    /* Connection Status and Error Handling */
+    .connection-status {
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        z-index: 9998;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .autocomplete-item .spinner-border-sm {
+        border-width: 0.1em;
+    }
+
+    .alert-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    .searching {
+        animation: pulse 1.5s ease-in-out infinite;
     }
 
     @media (max-width: 768px) {
@@ -356,6 +557,10 @@
         .sidebar-card {
             margin-bottom: 1rem;
         }
+
+        .category-parts {
+            padding-right: 0.5rem;
+        }
     }
 </style>
 {% endblock %}
@@ -365,14 +570,28 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="fw-bold mb-2">
+                <h1 class="fw-bold mb-2 text-white">
                     <i class="fas fa-plus-circle me-2"></i>
                     طلب استعارة جديد
                 </h1>
-                <p class="text-muted">أكمل الخطوات التالية لإنشاء طلب استعارة احترافي</p>
+                <p class="text-white-50">أكمل الخطوات التالية لإنشاء طلب استعارة احترافي</p>
+                {% if inventory_available %}
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success me-2">
+                        <i class="fas fa-database me-1"></i>
+                        متصل بالمخزون
+                    </span>
+                    <small class="text-white-50">{{ total_parts_count }} قطعة متوفرة</small>
+                </div>
+                {% else %}
+                <div class="alert alert-warning alert-sm">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>تنبيه:</strong> المخزون غير متصل. سيتم استخدام البيانات الافتراضية.
+                </div>
+                {% endif %}
             </div>
             <div class="text-end">
-                <span class="badge bg-primary px-3 py-2">
+                <span class="badge bg-light text-dark px-3 py-2">
                     <i class="fas fa-user me-2"></i>
                     {{ user.get_full_name|default:user.username }}
                 </span>
@@ -491,15 +710,44 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label class="form-label">اسم القطعة *</label>
-                                        <input type="text" class="form-control" name="part_name_0"
-                                               placeholder="مثال: Arduino Uno R3" required>
+                                        <select class="form-select part-name-select" name="part_name_0" required data-part-index="0">
+                                            <option value="">اختر القطعة...</option>
+                                            {% for part in available_parts %}
+                                            <option value="{{ part.name }}"
+                                                    data-quantity="{{ part.quantity }}"
+                                                    data-description="{{ part.description|default:'' }}"
+                                                    data-part-id="{{ part.id }}"
+                                                    data-part-number="{{ part.part_number|default:'' }}"
+                                                    data-location="{{ part.location|default:'' }}"
+                                                    data-manufacturer="{{ part.manufacturer|default:'' }}"
+                                                    data-category="{{ part.category|default:'' }}">
+                                                {{ part.name }}
+                                                {% if part.part_number %}({{ part.part_number }}){% endif %}
+                                                - متوفر: {{ part.quantity }}
+                                            </option>
+                                            {% empty %}
+                                            <option value="" disabled>لا توجد قطع متاحة في المخزون</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="part-info mt-2" id="partInfo_0" style="display: none;">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                <span class="part-description"></span>
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="form-label">الكمية *</label>
-                                        <input type="number" class="form-control" name="quantity_0"
-                                               min="1" value="1" required>
+                                        <input type="number" class="form-control quantity-input" name="quantity_0"
+                                               min="1" value="1" required data-part-index="0">
+                                        <div class="quantity-warning mt-1" style="display: none;">
+                                            <small class="text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                <span class="warning-text"></span>
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -520,14 +768,6 @@
                         <button type="button" class="add-part-btn" onclick="addNewPart()">
                             <i class="fas fa-plus me-2"></i>
                             إضافة قطعة أخرى
-                        </button>
-                    </div>
-
-                    <!-- DEBUG: Test Submit Button -->
-                    <div class="text-center mt-3">
-                        <button type="button" class="btn btn-sm btn-outline-info" onclick="testSubmit()">
-                            <i class="fas fa-bug me-2"></i>
-                            اختبار الإرسال
                         </button>
                     </div>
 
@@ -644,6 +884,65 @@
             </div>
         </div>
 
+        <!-- Enhanced Inventory Browser Card -->
+        <div class="sidebar-card">
+            <div class="card-header">
+                <h5 class="card-title text-primary">
+                    <i class="fas fa-search me-2"></i>
+                    تصفح المخزون
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="part-search-container">
+                    <input type="text" class="form-control part-search-input"
+                           placeholder="البحث في المخزون..." id="inventorySearch">
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Clear button will be added automatically by JS -->
+                </div>
+
+                <div id="inventoryBrowser">
+                    {% for category, parts in categories.items %}
+                    <div class="category-section">
+                        <div class="category-header" onclick="toggleCategory('{{ category }}')">
+                            <i class="fas fa-folder me-2"></i>
+                            {{ category }}
+                            <span class="badge bg-secondary ms-2" data-original-count="{{ parts|length }}">{{ parts|length }}</span>
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </div>
+                        <div class="category-parts" id="category_{{ category }}">
+                            {% for part in parts %}
+                            <div class="popular-part-item"
+                                 onclick="addInventoryPart('{{ part.name }}', {{ part.quantity }}, '{{ part.description|default:'' }}')"
+                                 data-part-number="{{ part.part_number|default:'' }}"
+                                 data-manufacturer="{{ part.manufacturer|default:'' }}"
+                                 data-model="{{ part.model|default:'' }}"
+                                 data-category="{{ category }}">
+                                <div class="popular-part-quantity">{{ part.quantity }}</div>
+                                <div class="part-name">{{ part.name }}</div>
+                                {% if part.description %}
+                                <small class="text-muted d-block">{{ part.description|truncatechars:40 }}</small>
+                                {% endif %}
+                                {% if part.part_number %}
+                                <small class="text-secondary">
+                                    <i class="fas fa-hashtag me-1"></i>
+                                    {{ part.part_number }}
+                                </small>
+                                {% endif %}
+                                {% if part.location %}
+                                <small class="text-info d-block">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ part.location }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <!-- Popular Parts Card -->
         <div class="sidebar-card">
             <div class="card-header">
@@ -654,35 +953,20 @@
                 <small class="text-muted">انقر لإضافة سريعة</small>
             </div>
             <div class="card-body">
-                <div class="popular-part-item" onclick="addPopularPart('Arduino Uno R3')">
+                {% for part in popular_parts %}
+                <div class="popular-part-item" onclick="addPopularPart('{{ part.name }}', {{ part.quantity|default:5 }})">
+                    <div class="popular-part-quantity">{{ part.quantity|default:5 }}</div>
                     <i class="fas fa-microchip me-2 text-primary"></i>
-                    <strong>Arduino Uno R3</strong>
-                    <br><small class="text-muted">متحكم دقيق للمشاريع</small>
+                    <strong>{{ part.name }}</strong>
+                    {% if part.description %}
+                    <br><small class="text-muted">{{ part.description|truncatechars:30 }}</small>
+                    {% elif part.category %}
+                    <br><small class="text-muted">{{ part.category }}</small>
+                    {% else %}
+                    <br><small class="text-muted">قطعة إلكترونية</small>
+                    {% endif %}
                 </div>
-
-                <div class="popular-part-item" onclick="addPopularPart('Breadboard Full Size')">
-                    <i class="fas fa-th me-2 text-success"></i>
-                    <strong>Breadboard</strong>
-                    <br><small class="text-muted">لوحة توصيل بدون لحام</small>
-                </div>
-
-                <div class="popular-part-item" onclick="addPopularPart('LED Kit (Red, Green, Blue)')">
-                    <i class="fas fa-lightbulb me-2 text-warning"></i>
-                    <strong>مجموعة LED</strong>
-                    <br><small class="text-muted">أضواء ملونة للمشاريع</small>
-                </div>
-
-                <div class="popular-part-item" onclick="addPopularPart('Resistor Kit (220Ω - 10kΩ)')">
-                    <i class="fas fa-minus me-2 text-info"></i>
-                    <strong>مجموعة مقاومات</strong>
-                    <br><small class="text-muted">قيم مختلفة للدوائر</small>
-                </div>
-
-                <div class="popular-part-item" onclick="addPopularPart('Jumper Wires Set')">
-                    <i class="fas fa-plug me-2 text-danger"></i>
-                    <strong>أسلاك توصيل</strong>
-                    <br><small class="text-muted">ذكر وأنثى ومختلط</small>
-                </div>
+                {% endfor %}
             </div>
         </div>
 
@@ -700,16 +984,564 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
+// Global variables
 let currentStep = 1;
 let partCounter = 1;
+let availableParts = {{ available_parts|safe }};
+let autocompleteTimeout;
+
+// CSRF Token handling
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Configure AJAX requests to include CSRF token
+function setupAjaxCSRF() {
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        let [resource, config] = args;
+
+        if (config && config.method && config.method.toUpperCase() !== 'GET') {
+            config.headers = config.headers || {};
+            if (!config.headers['X-CSRFToken']) {
+                config.headers['X-CSRFToken'] = csrftoken;
+            }
+        }
+
+        return originalFetch(resource, config);
+    };
+}
+
+// Error handling and user feedback
+function showSearchError(message, isTemporary = true) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'alert alert-warning alert-dismissible fade show';
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 500px;
+    `;
+
+    errorDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>خطأ في البحث:</strong> ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(errorDiv);
+
+    if (isTemporary) {
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+function showConnectionStatus(isOnline) {
+    const statusDiv = document.getElementById('connection-status') || document.createElement('div');
+    statusDiv.id = 'connection-status';
+    statusDiv.className = `alert ${isOnline ? 'alert-success' : 'alert-danger'} alert-sm`;
+    statusDiv.style.cssText = `
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        z-index: 9998;
+        padding: 0.5rem 1rem;
+        margin: 0;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    `;
+
+    statusDiv.innerHTML = `
+        <i class="fas fa-${isOnline ? 'wifi' : 'wifi-slash'} me-1"></i>
+        ${isOnline ? 'متصل بالمخزون' : 'غير متصل - وضع محلي'}
+    `;
+
+    if (!document.getElementById('connection-status')) {
+        document.body.appendChild(statusDiv);
+    }
+
+    if (isOnline) {
+        setTimeout(() => statusDiv.remove(), 3000);
+    }
+}
+
+// Enhanced dropdown functionality for part selection
+function setupPartDropdowns() {
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('part-name-select')) {
+            handlePartSelection(e.target);
+        }
+    });
+
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('quantity-input')) {
+            validateQuantity(e.target);
+        }
+    });
+}
+
+function handlePartSelection(selectElement) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const partIndex = selectElement.dataset.partIndex;
+
+    if (!selectedOption.value) {
+        // Clear part info if no selection
+        const partInfo = document.getElementById(`partInfo_${partIndex}`);
+        if (partInfo) {
+            partInfo.style.display = 'none';
+        }
+        return;
+    }
+
+    const partName = selectedOption.value;
+    const quantity = parseInt(selectedOption.dataset.quantity) || 0;
+    const description = selectedOption.dataset.description || '';
+    const partId = selectedOption.dataset.partId || '';
+    const partNumber = selectedOption.dataset.partNumber || '';
+    const location = selectedOption.dataset.location || '';
+    const manufacturer = selectedOption.dataset.manufacturer || '';
+    const category = selectedOption.dataset.category || '';
+
+    // Store part data in the select element
+    selectElement.dataset.partId = partId;
+    selectElement.dataset.maxQuantity = quantity;
+
+    // Update part info display
+    const partInfo = document.getElementById(`partInfo_${partIndex}`);
+    if (partInfo && description) {
+        let detailsHtml = `
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                <span class="part-description">${description}</span>
+            </small>
+        `;
+
+        if (partNumber) {
+            detailsHtml += `<small class="text-secondary d-block"><i class="fas fa-hashtag me-1"></i>${partNumber}</small>`;
+        }
+        if (manufacturer) {
+            detailsHtml += `<small class="text-info d-block"><i class="fas fa-industry me-1"></i>${manufacturer}</small>`;
+        }
+        if (location) {
+            detailsHtml += `<small class="text-muted d-block"><i class="fas fa-map-marker-alt me-1"></i>${location}</small>`;
+        }
+        if (category) {
+            detailsHtml += `<small class="text-primary d-block"><i class="fas fa-folder me-1"></i>${category}</small>`;
+        }
+
+        partInfo.innerHTML = detailsHtml;
+        partInfo.style.display = 'block';
+    }
+
+    // Update quantity validation
+    const quantityInput = document.querySelector(`[name="quantity_${partIndex}"]`);
+    if (quantityInput) {
+        quantityInput.dataset.maxQuantity = quantity;
+        quantityInput.dataset.partId = partId;
+        validateQuantity(quantityInput);
+    }
+
+    // Update review if on step 2
+    if (currentStep === 2) {
+        setTimeout(updateReviewSection, 100);
+    }
+
+    showToast(`تم اختيار ${partName}`, 'success');
+}
+
+// Enhanced inventory search for the sidebar
+function initializeInventorySearch() {
+    const searchInput = document.getElementById('inventorySearch');
+    const inventoryBrowser = document.getElementById('inventoryBrowser');
+
+    if (!searchInput || !inventoryBrowser) {
+        console.warn('Search elements not found');
+        return;
+    }
+
+    // Create search stats element
+    const searchStats = document.createElement('div');
+    searchStats.className = 'search-stats';
+    searchStats.style.display = 'none';
+    searchInput.parentNode.insertAdjacentElement('afterend', searchStats);
+
+    // Create clear search button
+    const clearButton = document.createElement('button');
+    clearButton.innerHTML = '<i class="fas fa-times"></i>';
+    clearButton.className = 'clear-search';
+    clearButton.type = 'button';
+    clearButton.title = 'مسح البحث';
+    searchInput.parentNode.appendChild(clearButton);
+
+    let searchTimeout;
+
+    // Search input handler with backend integration
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+
+        // Show/hide clear button
+        clearButton.style.display = query ? 'block' : 'none';
+
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            resetInventoryView();
+            return;
+        }
+
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            performInventorySearch(query);
+        }, 300);
+    });
+
+    // Clear search handler
+    clearButton.addEventListener('click', function() {
+        searchInput.value = '';
+        clearButton.style.display = 'none';
+        resetInventoryView();
+        searchInput.focus();
+    });
+
+    // Enhanced inventory search function
+    function performInventorySearch(query) {
+        // Show loading state
+        searchStats.innerHTML = `
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            جاري البحث عن "<strong>${escapeHtml(query)}</strong>"...
+        `;
+        searchStats.style.display = 'block';
+
+        // Make backend request
+        fetch(`/borrowing/parts/autocomplete/?q=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayInventorySearchResults(query, data.results || []);
+        })
+        .catch(error => {
+            console.error('Inventory search error:', error);
+            // Fallback to local search
+            performLocalInventorySearch(query);
+        });
+    }
+
+    function displayInventorySearchResults(query, results) {
+        const categories = inventoryBrowser.querySelectorAll('.category-section');
+
+        if (results.length === 0) {
+            // Hide all categories and show no results
+            categories.forEach(cat => cat.style.display = 'none');
+            showNoResultsMessage(0);
+            updateSearchStats(query, 0, 0);
+            return;
+        }
+
+        // Group results by category
+        const resultsByCategory = {};
+        results.forEach(part => {
+            const category = part.category || 'أخرى';
+            if (!resultsByCategory[category]) {
+                resultsByCategory[category] = [];
+            }
+            resultsByCategory[category].push(part);
+        });
+
+        let totalResults = 0;
+        let visibleCategories = 0;
+
+        categories.forEach(categorySection => {
+            const categoryHeader = categorySection.querySelector('.category-header');
+            const categoryParts = categorySection.querySelector('.category-parts');
+            const categoryTitle = categoryHeader.textContent.trim().split('\n')[0].trim();
+
+            if (resultsByCategory[categoryTitle]) {
+                // Show this category with filtered results
+                categorySection.style.display = 'block';
+
+                // Clear existing parts and add search results
+                categoryParts.innerHTML = '';
+                resultsByCategory[categoryTitle].forEach(part => {
+                    const partElement = createPartElement(part, query);
+                    categoryParts.appendChild(partElement);
+                    totalResults++;
+                });
+
+                // Update category badge
+                const badge = categoryHeader.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = resultsByCategory[categoryTitle].length;
+                    badge.className = 'badge bg-success ms-2';
+                }
+
+                // Auto-expand category
+                categoryParts.classList.remove('collapsed');
+                const chevron = categoryHeader.querySelector('.fa-chevron-down');
+                if (chevron) {
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+
+                visibleCategories++;
+            } else {
+                // Hide categories with no results
+                categorySection.style.display = 'none';
+            }
+        });
+
+        updateSearchStats(query, totalResults, visibleCategories);
+        showNoResultsMessage(totalResults);
+    }
+
+    function createPartElement(part, query) {
+        const partDiv = document.createElement('div');
+        partDiv.className = 'popular-part-item';
+        partDiv.onclick = () => addInventoryPart(part.name, part.quantity, part.description || '');
+
+        // Highlight matching text
+        const highlightedName = highlightText(part.name, query);
+        const highlightedDesc = part.description ? highlightText(part.description, query) : '';
+
+        partDiv.innerHTML = `
+            <div class="popular-part-quantity">${part.quantity}</div>
+            <div class="part-name">${highlightedName}</div>
+            ${highlightedDesc ? `<small class="text-muted d-block">${highlightedDesc}</small>` : ''}
+            ${part.part_number ? `<small class="text-secondary"><i class="fas fa-hashtag me-1"></i>${part.part_number}</small>` : ''}
+            ${part.full_location ? `<small class="text-info d-block"><i class="fas fa-map-marker-alt me-1"></i>${part.full_location}</small>` : ''}
+        `;
+
+        return partDiv;
+    }
+
+    function highlightText(text, query) {
+        const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+        return text.replace(regex, '<mark class="highlight">$1</mark>');
+    }
+
+    function resetInventoryView() {
+        // Reset to original state
+        searchStats.style.display = 'none';
+
+        // Show all categories
+        const categories = inventoryBrowser.querySelectorAll('.category-section');
+        categories.forEach(categorySection => {
+            categorySection.style.display = 'block';
+
+            // Reset badge counts
+            const badge = categorySection.querySelector('.badge');
+            if (badge && badge.dataset.originalCount) {
+                badge.textContent = badge.dataset.originalCount;
+                badge.className = 'badge bg-secondary ms-2';
+            }
+        });
+
+        // Hide no results message
+        const noResultsDiv = inventoryBrowser.querySelector('.no-results');
+        if (noResultsDiv) {
+            noResultsDiv.style.display = 'none';
+        }
+    }
+
+    // Utility functions
+    function updateSearchStats(query, totalResults, visibleCategories) {
+        searchStats.innerHTML = `
+            <i class="fas fa-search me-2"></i>
+            البحث عن "<strong>${escapeHtml(query)}</strong>":
+            <span class="text-primary">${totalResults}</span> قطعة في
+            <span class="text-info">${visibleCategories}</span> فئة
+        `;
+        searchStats.style.display = 'block';
+    }
+
+    function showNoResultsMessage(totalResults) {
+        let noResultsDiv = inventoryBrowser.querySelector('.no-results');
+
+        if (totalResults === 0) {
+            if (!noResultsDiv) {
+                noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'no-results';
+                noResultsDiv.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">لا توجد نتائج</h6>
+                        <p class="small text-muted mb-0">جرب كلمات بحث أخرى أو تصفح الفئات</p>
+                    </div>
+                `;
+                inventoryBrowser.appendChild(noResultsDiv);
+            }
+            noResultsDiv.style.display = 'block';
+        } else if (noResultsDiv) {
+            noResultsDiv.style.display = 'none';
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Store original category counts
+    const categories = inventoryBrowser.querySelectorAll('.category-section');
+    categories.forEach(categorySection => {
+        const badge = categorySection.querySelector('.badge');
+        if (badge && !badge.dataset.originalCount) {
+            badge.dataset.originalCount = badge.textContent;
+        }
+    });
+
+    console.log('✅ Enhanced inventory search with backend integration initialized');
+}
+
+// Enhanced category toggle function
+function toggleCategory(category) {
+    const categoryDiv = document.getElementById('category_' + category);
+    const header = event.currentTarget;
+    const icon = header.querySelector('.fa-chevron-down');
+
+    if (!categoryDiv || !icon) return;
+
+    const isCollapsed = categoryDiv.classList.contains('collapsed');
+
+    if (isCollapsed) {
+        categoryDiv.classList.remove('collapsed');
+        icon.style.transform = 'rotate(0deg)';
+
+        // Animate expansion
+        categoryDiv.style.maxHeight = 'none';
+        const height = categoryDiv.scrollHeight;
+        categoryDiv.style.maxHeight = '0px';
+
+        requestAnimationFrame(() => {
+            categoryDiv.style.transition = 'max-height 0.3s ease-out';
+            categoryDiv.style.maxHeight = height + 'px';
+
+            setTimeout(() => {
+                categoryDiv.style.maxHeight = 'none';
+                categoryDiv.style.transition = '';
+            }, 300);
+        });
+    } else {
+        // Animate collapse
+        const height = categoryDiv.scrollHeight;
+        categoryDiv.style.maxHeight = height + 'px';
+        categoryDiv.style.transition = 'max-height 0.3s ease-out';
+
+        requestAnimationFrame(() => {
+            categoryDiv.style.maxHeight = '0px';
+        });
+
+        setTimeout(() => {
+            categoryDiv.classList.add('collapsed');
+            icon.style.transform = 'rotate(-90deg)';
+            categoryDiv.style.maxHeight = '';
+            categoryDiv.style.transition = '';
+        }, 300);
+    }
+}
+
+// Validate parts availability before form submission
+function validatePartsAvailability() {
+    return new Promise((resolve) => {
+        const partSelects = document.querySelectorAll('[name^="part_name_"]');
+        const partsToValidate = [];
+
+        partSelects.forEach((select, index) => {
+            const partName = select.value.trim();
+            if (partName) {
+                const quantityInput = document.querySelector(`[name="quantity_${index}"]`);
+                const quantity = parseInt(quantityInput?.value) || 1;
+                const partId = select.dataset.partId || null;
+
+                partsToValidate.push({
+                    name: partName,
+                    quantity: quantity,
+                    part_id: partId
+                });
+            }
+        });
+
+        if (partsToValidate.length === 0) {
+            resolve(true);
+            return;
+        }
+
+        // For dropdown version, we can do client-side validation since we have all the data
+        let allValid = true;
+        let errorMessages = [];
+
+        partsToValidate.forEach(part => {
+            const select = document.querySelector(`[name*="part_name_"][value="${part.name}"]`);
+            const maxQuantity = parseInt(select?.dataset.maxQuantity) || 0;
+
+            if (part.quantity > maxQuantity) {
+                allValid = false;
+                errorMessages.push(`الكمية المطلوبة من ${part.name} (${part.quantity}) أكبر من المتوفر (${maxQuantity})`);
+            }
+        });
+
+        if (!allValid && errorMessages.length > 0) {
+            showSearchError(errorMessages.join('<br>'), false);
+        }
+
+        resolve(allValid);
+    });
+}
 
 // Initialize form
 document.addEventListener('DOMContentLoaded', function() {
     showStep(1);
     updateNavigationButtons();
-    console.log('Form initialized - showing step 1');
+    setupPartDropdowns(); // Changed from setupAutocomplete
+    initializeInventorySearch(); // Keep for sidebar browsing
+    setupAjaxCSRF();
+    monitorNetworkStatus();
+
+    // Debug: Check if parts are loaded
+    console.log('✅ Form initialized with dropdown part selection');
+    console.log(`📦 Available parts loaded: ${availableParts?.length || 0}`);
+
+    if (!availableParts || availableParts.length === 0) {
+        console.warn('⚠️ No parts available! Check your Django context.');
+        console.log('Available parts data:', availableParts);
+
+        // Show warning to user
+        showToast('تحذير: لم يتم تحميل أي قطع من المخزون', 'warning');
+    } else {
+        console.log('✅ Parts loaded successfully:', availableParts.slice(0, 3)); // Show first 3 parts
+    }
 });
 
 function showStep(stepNumber) {
@@ -718,17 +1550,12 @@ function showStep(stepNumber) {
     // Hide all steps
     document.querySelectorAll('.step-content').forEach(step => {
         step.classList.remove('show');
-        console.log('Hiding step:', step.id);
     });
 
     // Show target step
     const targetStep = document.getElementById('step' + stepNumber);
     if (targetStep) {
         targetStep.classList.add('show');
-        console.log('Showing step:', targetStep.id);
-        console.log('Step has show class:', targetStep.classList.contains('show'));
-    } else {
-        console.error('Step not found: step' + stepNumber);
     }
 
     currentStep = stepNumber;
@@ -738,29 +1565,17 @@ function showStep(stepNumber) {
     if (stepNumber === 2) {
         updateReviewSection();
     }
-
-    // Double-check visibility
-    setTimeout(() => {
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        console.log('Step 1 visible:', step1.classList.contains('show'));
-        console.log('Step 2 visible:', step2.classList.contains('show'));
-    }, 100);
 }
 
 function goToStep(stepNumber) {
     console.log('Going to step:', stepNumber);
 
-    // When going to step 2, only validate step 1
     if (stepNumber === 2 && !validateStep1()) {
-        console.log('Step 1 validation failed');
         return;
     }
 
     showStep(stepNumber);
     updateNavigationButtons();
-
-    // Smooth scroll to top
     document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -776,7 +1591,6 @@ function updateStepIndicator() {
             step.innerHTML = '<i class="fas fa-check"></i><div class="step-label">' +
                            (stepNum === 1 ? 'معلومات الطلب' : 'القطع وإرسال') + '</div>';
         } else {
-            // Reset to original icons for future steps
             if (stepNum === 1) {
                 step.innerHTML = '<i class="fas fa-info-circle"></i><div class="step-label">معلومات الطلب</div>';
             } else {
@@ -797,32 +1611,18 @@ function updateNavigationButtons() {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    console.log('Updating navigation buttons for step:', currentStep);
-
-    // Previous button
     if (currentStep === 1) {
         prevBtn.style.visibility = 'hidden';
     } else {
         prevBtn.style.visibility = 'visible';
     }
 
-    // Next/Submit button
     if (currentStep === 2) {
         nextBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>إرسال الطلب';
-        nextBtn.type = 'button';  // Important: keep as button, not submit
-        nextBtn.onclick = function() {
-            console.log('Submit button clicked!');
-            submitForm();
-        };
-        console.log('Submit button configured');
+        nextBtn.onclick = function() { submitForm(); };
     } else {
         nextBtn.innerHTML = 'التالي <i class="fas fa-arrow-left ms-2"></i>';
-        nextBtn.type = 'button';
-        nextBtn.onclick = function() {
-            console.log('Next button clicked!');
-            goToStep(2);
-        };
-        console.log('Next button configured');
+        nextBtn.onclick = function() { goToStep(2); };
     }
 }
 
@@ -831,17 +1631,16 @@ function validateStep1() {
     const returnDate = document.querySelector('#id_expected_return_date').value;
 
     if (!purpose) {
-        alert('يرجى إدخال الغرض من الاستعارة');
+        showToast('يرجى إدخال الغرض من الاستعارة', 'danger');
         return false;
     }
     if (!returnDate) {
-        alert('يرجى تحديد تاريخ الإرجاع المتوقع');
+        showToast('يرجى تحديد تاريخ الإرجاع المتوقع', 'danger');
         return false;
     }
 
-    // Check if return date is in the future
     if (returnDate && new Date(returnDate) <= new Date()) {
-        alert('يجب أن يكون تاريخ الإرجاع في المستقبل');
+        showToast('يجب أن يكون تاريخ الإرجاع في المستقبل', 'danger');
         return false;
     }
 
@@ -849,67 +1648,118 @@ function validateStep1() {
 }
 
 function validateStep2() {
-    const partInputs = document.querySelectorAll('[name^="part_name_"]');
+    const partSelects = document.querySelectorAll('[name^="part_name_"]');
     let hasValidPart = false;
 
-    partInputs.forEach(input => {
-        if (input.value.trim()) hasValidPart = true;
+    partSelects.forEach(select => {
+        if (select.value.trim()) hasValidPart = true;
     });
 
     if (!hasValidPart) {
-        alert('يرجى إضافة قطعة واحدة على الأقل');
+        showToast('يرجى إضافة قطعة واحدة على الأقل', 'danger');
         return false;
     }
 
     return true;
 }
 
+function validateQuantity(quantityInput) {
+    const requested = parseInt(quantityInput.value) || 0;
+    const available = parseInt(quantityInput.dataset.maxQuantity) || 999;
+    const warningDiv = quantityInput.parentElement.querySelector('.quantity-warning');
+
+    if (requested > available) {
+        warningDiv.querySelector('.warning-text').textContent =
+            `الحد الأقصى المتوفر: ${available}`;
+        warningDiv.style.display = 'block';
+        quantityInput.classList.add('is-invalid');
+    } else {
+        warningDiv.style.display = 'none';
+        quantityInput.classList.remove('is-invalid');
+    }
+}
+
 function addNewPart() {
     const container = document.getElementById('partsContainer');
-    const newPartHtml = `
-        <div class="part-item" data-part-index="${partCounter}">
-            <div class="part-header">
-                <div class="part-number">${partCounter + 1}</div>
-                <h6 class="flex-grow-1 mx-3 mb-0">القطعة رقم ${partCounter + 1}</h6>
-                <button type="button" class="remove-part-btn" onclick="removePart(this)">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">اسم القطعة *</label>
-                        <input type="text" class="form-control" name="part_name_${partCounter}"
-                               placeholder="مثال: Arduino Uno R3" required>
+    // Create the new part element
+    const newPartDiv = document.createElement('div');
+    newPartDiv.className = 'part-item';
+    newPartDiv.setAttribute('data-part-index', partCounter);
+
+    // Build the options HTML from the available parts data
+    let optionsHtml = '<option value="">اختر القطعة...</option>';
+    if (availableParts && availableParts.length > 0) {
+        availableParts.forEach(part => {
+            const partNumber = part.part_number ? ` (${part.part_number})` : '';
+            optionsHtml += `
+                <option value="${part.name}"
+                        data-quantity="${part.quantity}"
+                        data-description="${part.description || ''}"
+                        data-part-id="${part.id}"
+                        data-part-number="${part.part_number || ''}"
+                        data-location="${part.location || ''}"
+                        data-manufacturer="${part.manufacturer || ''}"
+                        data-category="${part.category || ''}">
+                    ${part.name}${partNumber} - متوفر: ${part.quantity}
+                </option>
+            `;
+        });
+    }
+
+    newPartDiv.innerHTML = `
+        <div class="part-header">
+            <div class="part-number">${partCounter + 1}</div>
+            <h6 class="flex-grow-1 mx-3 mb-0">القطعة رقم ${partCounter + 1}</h6>
+            <button type="button" class="remove-part-btn" onclick="removePart(this)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label">اسم القطعة *</label>
+                    <select class="form-select part-name-select" name="part_name_${partCounter}" required data-part-index="${partCounter}">
+                        ${optionsHtml}
+                    </select>
+                    <div class="part-info mt-2" id="partInfo_${partCounter}" style="display: none;">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <span class="part-description"></span>
+                        </small>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">الكمية *</label>
-                        <input type="number" class="form-control" name="quantity_${partCounter}"
-                               min="1" value="1" required>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">الكمية *</label>
+                    <input type="number" class="form-control quantity-input" name="quantity_${partCounter}"
+                           min="1" value="1" required data-part-index="${partCounter}">
+                    <div class="quantity-warning mt-1" style="display: none;">
+                        <small class="text-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <span class="warning-text"></span>
+                        </small>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label class="form-label">الحالة المطلوبة</label>
-                        <select class="form-select" name="condition_${partCounter}">
-                            <option value="excellent">ممتازة</option>
-                            <option value="good">جيدة</option>
-                            <option value="fair">مقبولة</option>
-                        </select>
-                    </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label class="form-label">الحالة المطلوبة</label>
+                    <select class="form-select" name="condition_${partCounter}">
+                        <option value="excellent">ممتازة</option>
+                        <option value="good">جيدة</option>
+                        <option value="fair">مقبولة</option>
+                    </select>
                 </div>
             </div>
         </div>
     `;
 
-    container.insertAdjacentHTML('beforeend', newPartHtml);
+    container.appendChild(newPartDiv);
     partCounter++;
-
-    // Smooth scroll to new part
-    container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    newPartDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function removePart(button) {
@@ -937,36 +1787,70 @@ function updatePartNumbers() {
     });
 }
 
-function addPopularPart(partName) {
-    // Find the first empty part name field or add a new part
-    const partInputs = document.querySelectorAll('[name^="part_name_"]');
+function addPopularPart(partName, quantity = 5) {
+    addPartToForm(partName, quantity);
+}
+
+function addInventoryPart(partName, quantity, description = '') {
+    addPartToForm(partName, quantity, description);
+
+    // Provide visual feedback
+    const searchInput = document.getElementById('inventorySearch');
+    if (searchInput) {
+        // Briefly highlight the search input
+        searchInput.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.5)';
+        setTimeout(() => {
+            searchInput.style.boxShadow = '';
+        }, 1000);
+    }
+}
+
+function addPartToForm(partName, quantity, description = '') {
+    const partSelects = document.querySelectorAll('[name^="part_name_"]');
     let addedToExisting = false;
 
-    for (let input of partInputs) {
-        if (!input.value.trim()) {
-            input.value = partName;
-            input.focus();
-            addedToExisting = true;
-            break;
+    for (let select of partSelects) {
+        if (!select.value.trim()) {
+            // Find the option with matching part name
+            const option = Array.from(select.options).find(opt =>
+                opt.value === partName || opt.textContent.includes(partName)
+            );
+
+            if (option) {
+                select.value = option.value;
+                // Trigger change event to update part info
+                const changeEvent = new Event('change', { bubbles: true });
+                select.dispatchEvent(changeEvent);
+                addedToExisting = true;
+                break;
+            }
         }
     }
 
     if (!addedToExisting) {
         addNewPart();
         setTimeout(() => {
-            const newInput = document.querySelector(`[name="part_name_${partCounter - 1}"]`);
-            if (newInput) {
-                newInput.value = partName;
+            const newSelect = document.querySelector(`[name="part_name_${partCounter - 1}"]`);
+            if (newSelect) {
+                const option = Array.from(newSelect.options).find(opt =>
+                    opt.value === partName || opt.textContent.includes(partName)
+                );
+
+                if (option) {
+                    newSelect.value = option.value;
+                    // Trigger change event to update part info
+                    const changeEvent = new Event('change', { bubbles: true });
+                    newSelect.dispatchEvent(changeEvent);
+                }
             }
         }, 100);
     }
 
-    // Update review if on step 2
     if (currentStep === 2) {
         setTimeout(updateReviewSection, 200);
     }
 
-    showToast('تم إضافة ' + partName + ' إلى القائمة', 'success');
+    showToast(`تم إضافة ${partName} إلى القائمة`, 'success');
 }
 
 function quickFill(purposeText) {
@@ -975,28 +1859,25 @@ function quickFill(purposeText) {
 }
 
 function updateReviewSection() {
-    // Update purpose
     const purpose = document.querySelector('#id_purpose').value;
     document.getElementById('reviewPurpose').textContent = purpose || '-';
 
-    // Update return date
     const returnDate = document.querySelector('#id_expected_return_date').value;
     document.getElementById('reviewReturnDate').textContent = returnDate || '-';
 
-    // Update parts list
-    const partInputs = document.querySelectorAll('[name^="part_name_"]');
+    const partSelects = document.querySelectorAll('[name^="part_name_"]');
     const quantityInputs = document.querySelectorAll('[name^="quantity_"]');
     const partsList = document.getElementById('reviewPartsList');
 
     let partsHtml = '';
     let partsCount = 0;
 
-    partInputs.forEach((input, index) => {
-        if (input.value.trim()) {
+    partSelects.forEach((select, index) => {
+        if (select.value.trim()) {
             const quantity = quantityInputs[index]?.value || '1';
             partsHtml += `
                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <span><strong>${input.value}</strong></span>
+                    <span><strong>${select.value}</strong></span>
                     <span class="badge bg-primary">${quantity} قطعة</span>
                 </div>
             `;
@@ -1008,161 +1889,43 @@ function updateReviewSection() {
     document.getElementById('reviewPartsCount').textContent = partsCount + ' قطعة';
 }
 
-// Test function for debugging
-function testSubmit() {
-    console.log('=== TEST SUBMIT FUNCTION ===');
-
-    // Check if we can find all required elements
-    const form = document.getElementById('borrowingForm');
-    const purpose = document.querySelector('#id_purpose');
-    const returnDate = document.querySelector('#id_expected_return_date');
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-
-    console.log('Form element:', form);
-    console.log('Purpose field:', purpose, purpose?.value);
-    console.log('Return date field:', returnDate, returnDate?.value);
-    console.log('CSRF token:', csrfToken, csrfToken?.value);
-
-    // Check parts
-    const partInputs = document.querySelectorAll('[name^="part_name_"]');
-    console.log('Part inputs found:', partInputs.length);
-    partInputs.forEach((input, index) => {
-        console.log(`Part ${index}:`, input.value);
-    });
-
-    // Try simple form submission without validation
-    if (form) {
-        console.log('Attempting direct form submission...');
-
-        // Add a simple test part if none exist
-        if (partInputs.length === 0 || !partInputs[0].value.trim()) {
-            const testPartInput = document.createElement('input');
-            testPartInput.type = 'hidden';
-            testPartInput.name = 'part_name_0';
-            testPartInput.value = 'Test Part';
-            form.appendChild(testPartInput);
-
-            const testQuantityInput = document.createElement('input');
-            testQuantityInput.type = 'hidden';
-            testQuantityInput.name = 'quantity_0';
-            testQuantityInput.value = '1';
-            form.appendChild(testQuantityInput);
-
-            const testConditionInput = document.createElement('input');
-            testConditionInput.type = 'hidden';
-            testConditionInput.name = 'condition_0';
-            testConditionInput.value = 'excellent';
-            form.appendChild(testConditionInput);
-
-            console.log('Added test part data');
-        }
-
-        // Fill required fields if empty
-        if (!purpose?.value) {
-            purpose.value = 'Test purpose for debugging';
-        }
-        if (!returnDate?.value) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            returnDate.value = tomorrow.toISOString().split('T')[0];
-        }
-
-        console.log('Submitting form...');
-        form.submit();
-    } else {
-        console.error('Form not found!');
-        alert('خطأ: لم يتم العثور على النموذج');
-    }
-}
-
-function submitForm() {
+// Update the form submission function
+async function submitForm() {
     console.log('=== SUBMITTING FORM ===');
 
     if (!validateStep1() || !validateStep2()) {
-        console.log('Validation failed');
         return;
-    }
-
-    // Get the actual form element
-    const form = document.getElementById('borrowingForm');
-
-    if (!form) {
-        console.error('Form element not found!');
-        showToast('خطأ: لم يتم العثور على النموذج', 'danger');
-        return;
-    }
-
-    // Clear any existing hidden inputs for parts (to avoid duplicates)
-    const existingPartInputs = form.querySelectorAll('input[name^="part_name_"], input[name^="quantity_"], input[name^="condition_"]');
-    existingPartInputs.forEach(input => {
-        if (input.type === 'hidden') {
-            input.remove();
-        }
-    });
-
-    // Add parts data as hidden inputs to the actual form
-    const partInputs = document.querySelectorAll('[name^="part_name_"]');
-    const quantityInputs = document.querySelectorAll('[name^="quantity_"]');
-    const conditionInputs = document.querySelectorAll('[name^="condition_"]');
-
-    let partsAdded = 0;
-    partInputs.forEach((input, index) => {
-        if (input.value.trim()) {
-            // Create hidden inputs for this part
-            const partNameInput = document.createElement('input');
-            partNameInput.type = 'hidden';
-            partNameInput.name = `part_name_${partsAdded}`;
-            partNameInput.value = input.value.trim();
-            form.appendChild(partNameInput);
-
-            const quantityInput = document.createElement('input');
-            quantityInput.type = 'hidden';
-            quantityInput.name = `quantity_${partsAdded}`;
-            quantityInput.value = quantityInputs[index]?.value || '1';
-            form.appendChild(quantityInput);
-
-            const conditionInput = document.createElement('input');
-            conditionInput.type = 'hidden';
-            conditionInput.name = `condition_${partsAdded}`;
-            conditionInput.value = conditionInputs[index]?.value || 'excellent';
-            form.appendChild(conditionInput);
-
-            partsAdded++;
-            console.log(`Added part ${partsAdded}: ${input.value.trim()}`);
-        }
-    });
-
-    console.log(`Total parts added: ${partsAdded}`);
-
-    if (partsAdded === 0) {
-        console.error('No parts added!');
-        showToast('خطأ: لم يتم إضافة أي قطع', 'danger');
-        return;
-    }
-
-    // Debug: Log all form data
-    const formData = new FormData(form);
-    console.log('=== FORM DATA ===');
-    for (let [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
     }
 
     // Show loading state
     const submitBtn = document.getElementById('nextBtn');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الإرسال...';
-
-    // Simple form submission (most reliable)
-    console.log('Submitting form via regular POST...');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق من توفر القطع...';
 
     try {
+        // Validate parts availability
+        const isValid = await validatePartsAvailability();
+
+        if (!isValid) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            return;
+        }
+
+        // Update button text for actual submission
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>جاري إرسال الطلب...';
+
+        const form = document.getElementById('borrowingForm');
+        if (!form) {
+            throw new Error('لم يتم العثور على النموذج');
+        }
+
         form.submit();
-        console.log('Form submitted successfully');
+
     } catch (error) {
         console.error('Form submission error:', error);
-        showToast('خطأ في إرسال النموذج: ' + error.message, 'danger');
-        // Restore button state
+        showSearchError('خطأ في إرسال النموذج: ' + error.message, false);
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalText;
     }
@@ -1177,7 +1940,7 @@ function showToast(message, type = 'info') {
         animation: slideDown 0.3s ease-out;
     `;
     toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle me-2"></i>
+        <i class="fas fa-${type === 'success' ? 'check' : type === 'danger' ? 'exclamation' : 'info'}-circle me-2"></i>
         ${message}
     `;
 
@@ -1188,6 +1951,41 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// Add network status monitoring
+function monitorNetworkStatus() {
+    let wasOnline = navigator.onLine;
+
+    function updateOnlineStatus() {
+        const isOnline = navigator.onLine;
+        if (isOnline !== wasOnline) {
+            showConnectionStatus(isOnline);
+            wasOnline = isOnline;
+
+            if (isOnline) {
+                console.log('🌐 Network connection restored');
+            } else {
+                console.log('📴 Network connection lost');
+            }
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+}
+
+// Auto-update review section when on step 2
+document.addEventListener('change', function(e) {
+    if (currentStep === 2 && (e.target.name?.startsWith('part_name_') || e.target.name?.startsWith('quantity_'))) {
+        updateReviewSection();
+    }
+});
+
+document.addEventListener('input', function(e) {
+    if (currentStep === 2 && e.target.name?.startsWith('quantity_')) {
+        updateReviewSection();
+    }
+});
 
 // Add CSS animations
 const style = document.createElement('style');
@@ -1202,12 +2000,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-// Auto-update review section when on step 2
-document.addEventListener('input', function(e) {
-    if (currentStep === 2 && (e.target.name.startsWith('part_name_') || e.target.name.startsWith('quantity_'))) {
-        updateReviewSection();
-    }
-});
 </script>
 {% endblock %}
